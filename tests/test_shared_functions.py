@@ -3,7 +3,65 @@ from unittest.mock import patch
 
 import pytest
 
-from scripts.shared_functions import load_league_config, validate_league
+from scripts.shared_functions import (
+    get_all_owned_players,
+    get_required_column,
+    load_league_config,
+    load_owned_players,
+    names_match,
+    normalize_name,
+    validate_league,
+)
+
+
+def test_get_required_column_success():
+    row = {'Player Name': 'CeeDee Lamb', 'Rank': '1'}
+    assert get_required_column(row, 'Player Name', 'PLAYER_NAME_COLUMN', 'test.csv') == 'CeeDee Lamb'
+
+
+def test_get_required_column_missing():
+    row = {'Name': 'CeeDee Lamb'}
+    with pytest.raises(ValueError, match="Column 'Player Name' not found in test.csv"):
+        get_required_column(row, 'Player Name', 'PLAYER_NAME_COLUMN', 'test.csv')
+
+
+def test_normalize_name():
+    assert normalize_name('') == ''
+    assert normalize_name('Marvin Harrison Jr.') == 'marvin harrison'
+    assert normalize_name('Kenneth Walker III') == 'kenneth walker'
+    assert normalize_name('Tetairoa McMillan') == 'tet mcmillan'
+    assert normalize_name('Kenny Gainwell') == 'kenneth gainwell'
+    assert normalize_name("De'Von Achane") == 'devon achane'
+
+
+def test_names_match():
+    assert names_match('Marvin Harrison Jr.', 'Marvin Harrison') is True
+    assert names_match('Kenneth Gainwell', 'Kenny Gainwell') is True
+    assert names_match('Patrick Mahomes', 'Josh Allen') is False
+
+
+def test_load_owned_players_success(tmp_path):
+    owned_file = tmp_path / 'owned.json'
+    owned_file.write_text('{"Team A": [{"name": "Player 1"}]}', encoding='utf-8')
+    assert load_owned_players(owned_file) == {'Team A': [{'name': 'Player 1'}]}
+
+
+def test_load_owned_players_errors(tmp_path):
+    assert load_owned_players(tmp_path / 'missing.json') is None
+    bad_json = tmp_path / 'bad.json'
+    bad_json.write_text('{ bad }', encoding='utf-8')
+    assert load_owned_players(bad_json) is None
+
+
+def test_get_all_owned_players():
+    data = {
+        'Team 1': [{'name': 'Marvin Harrison Jr.'}],
+        'Team 2': [{'name': 'Josh Allen'}],
+    }
+    owned = get_all_owned_players(data)
+    assert 'Marvin Harrison Jr.' in owned
+    assert 'marvin harrison' in owned
+    assert 'Josh Allen' in owned
 
 
 def test_load_league_config_success(tmp_path):
