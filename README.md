@@ -61,6 +61,14 @@ uv run python main.py
 
 This downloads the latest weekly rankings, pulls your rosters from ESPN/Sleeper, and writes the resulting analysis to `lineups/start-sit.md`.
 
+## Resetting the project
+
+To clear out generated data (`rankings/`, `rosters/`, and `lineups/` directories) and start fresh:
+
+```shell
+uv run python scripts/reset_project.py
+```
+
 ## Running tests
 
 ```shell
