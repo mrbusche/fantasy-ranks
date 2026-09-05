@@ -3,11 +3,14 @@ import json
 import os
 from datetime import UTC, datetime, timedelta
 
+from dotenv import load_dotenv
 from espn_api.football import League
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 
 # --- Default Configuration ---
 DEFAULT_YEAR = 2026
-SWID = os.environ.get('ESPN_SWID')
+ESPN_SWID = os.environ.get('ESPN_SWID')
 ESPN_S2 = os.environ.get('ESPN_S2')
 ROSTERS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'rosters')
 
@@ -48,10 +51,11 @@ def check_if_update_needed_for_league(league_id):
     return True
 
 
-def fetch_and_export_data(league_id, year, ppr_type, swid=None, espn_s2=None):
+def fetch_and_export_data(league_id, ppr_type):
     try:
+        year = DEFAULT_YEAR
         print(f'Connecting to League {league_id} ({year}) - {ppr_type.upper()} PPR...')
-        league = League(league_id=league_id, year=year, swid=swid, espn_s2=espn_s2)
+        league = League(league_id=league_id, year=year, swid=ESPN_SWID, espn_s2=ESPN_S2)
     except (ValueError, KeyError, RuntimeError) as e:
         print(f'Connection failed: {e}')
         return
@@ -92,6 +96,6 @@ if __name__ == '__main__':
 
     if check_if_update_needed_for_league(args.league_id):
         print('Fetching and exporting ESPN data...')
-        fetch_and_export_data(args.league_id, DEFAULT_YEAR, args.ppr, SWID, ESPN_S2)
+        fetch_and_export_data(args.league_id, args.ppr)
     else:
         print('No update needed - using existing data files.')
