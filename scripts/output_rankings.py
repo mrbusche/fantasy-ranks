@@ -18,6 +18,11 @@ BASE_DIR = Path(__file__).parent
 RANKINGS_DIR = BASE_DIR.parent / 'rankings'
 ROSTERS_DIR = BASE_DIR.parent / 'rosters'
 
+PLAYER_NAME_COLUMN = 'Player Name'
+RANK_COLUMN = 'Rank'
+TEAM_COLUMN = 'Team'
+POSITION_COLUMN = 'Position'
+
 
 def load_owned_players(file_path):
     """Load the owned players data from JSON file."""
@@ -180,10 +185,10 @@ def load_rankings(scoring_type='half'):
                     rankings[positions] = {}
 
                 for row in reader:
-                    player_name = row.get('Player Name', '').strip()
-                    rank = int(row.get('Rank', 0))
-                    team = row.get('Team', '').strip()
-                    position = row.get('Position', '').strip()
+                    player_name = _get_required_column(row, PLAYER_NAME_COLUMN, 'PLAYER_NAME_COLUMN', filename).strip()
+                    rank = int(_get_required_column(row, RANK_COLUMN, 'RANK_COLUMN', filename) or 0)
+                    team = _get_required_column(row, TEAM_COLUMN, 'TEAM_COLUMN', filename).strip()
+                    position = _get_required_column(row, POSITION_COLUMN, 'POSITION_COLUMN', filename).strip()
 
                     # Handle D/ST naming convention
                     if position == 'DST':
@@ -603,6 +608,18 @@ def save_markdown():
         print(f'✅ Successfully saved analysis to {output_file}')
     except (OSError, TypeError) as e:
         print(f'❌ Error saving to {output_file}: {e}')
+
+
+def _get_required_column(row, column_name, column_var_name, filename):
+    """Get a required column's value from a CSV row, raising a helpful error if missing."""
+    value = row.get(column_name)
+    if value is None:
+        raise ValueError(
+            f"Column '{column_name}' not found in {filename}. "
+            f'Available columns: {list(row.keys())}. '
+            f'Update {column_var_name} at the top of output_rankings.py to match your CSV headers.'
+        )
+    return value
 
 
 def main():
