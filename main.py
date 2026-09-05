@@ -52,7 +52,7 @@ def run_script(script_path, additional_args=None):
 
 def run_platform_leagues(platform, leagues):
     """Run platform-specific script for multiple leagues."""
-    platform_dir = Path(__file__).parent / platform
+    platform_dir = Path(__file__).parent / 'scripts'
     script_path = f'{platform}_rosters.py'
 
     if not (platform_dir / script_path).exists():

@@ -4,3 +4,4 @@
 
 config.json
 rankings/*.csv
+rosters/*_owned_players.json
