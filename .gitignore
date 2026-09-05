@@ -7,6 +7,7 @@
 config.json
 rankings/*.csv
 
+lineups/ros-analysis.md
 lineups/start-sit.md
 
 rosters/*_owned_players.json

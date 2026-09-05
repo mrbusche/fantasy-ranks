@@ -9,7 +9,14 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from shared_functions import load_league_config
+from shared_functions import (
+    get_all_owned_players,
+    get_required_column,
+    load_league_config,
+    load_owned_players,
+    names_match,
+    normalize_name,
+)
 
 # Global variable to store markdown content
 markdown_content = []
@@ -19,22 +26,9 @@ RANKINGS_DIR = BASE_DIR.parent / 'rankings'
 ROSTERS_DIR = BASE_DIR.parent / 'rosters'
 
 PLAYER_NAME_COLUMN = 'Player Name'
+POSITION_COLUMN = 'Position'
 RANK_COLUMN = 'Rank'
 TEAM_COLUMN = 'Team'
-POSITION_COLUMN = 'Position'
-
-
-def load_owned_players(file_path):
-    """Load the owned players data from JSON file."""
-    try:
-        with open(file_path, 'r', encoding='utf-8') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        print(f'Error: File {file_path} not found.')
-        return None
-    except json.JSONDecodeError:
-        print(f'Error: Invalid JSON in file {file_path}.')
-        return None
 
 
 def load_custom_owned_players(file_path):
@@ -56,7 +50,7 @@ def load_custom_owned_players(file_path):
                     if isinstance(item, str):
                         players.add(item)
                         # Also add normalized version
-                        normalized = _normalize_name(item)
+                        normalized = normalize_name(item)
                         if normalized != item.lower().strip():
                             players.add(normalized)
 
@@ -67,7 +61,7 @@ def load_custom_owned_players(file_path):
                     for item in data['owned']:
                         if isinstance(item, str):
                             players.add(item)
-                            players.add(_normalize_name(item))
+                            players.add(normalize_name(item))
 
                 # Or iterate through all values if they are lists (like team rosters)
                 else:
@@ -82,7 +76,7 @@ def load_custom_owned_players(file_path):
 
                                 if name:
                                     players.add(name)
-                                    players.add(_normalize_name(name))
+                                    players.add(normalize_name(name))
 
             return players
 
@@ -108,21 +102,6 @@ def get_team_players(data, team_name):
         return None
 
     return data[team_name]
-
-
-def get_all_owned_players(data):
-    """Get all owned players across all teams."""
-    all_owned = set()
-    for team_players in data.values():
-        for player in team_players:
-            # Store both original and normalized names
-            player_name = player.get('name', '').strip()
-            all_owned.add(player_name)
-            # Also add normalized version for better matching
-            normalized = _normalize_name(player_name)
-            if normalized != player_name.lower().strip():
-                all_owned.add(normalized)
-    return all_owned
 
 
 def organize_by_position(players, league_type='espn'):
@@ -185,10 +164,10 @@ def load_rankings(scoring_type='half'):
                     rankings[positions] = {}
 
                 for row in reader:
-                    player_name = _get_required_column(row, PLAYER_NAME_COLUMN, 'PLAYER_NAME_COLUMN', filename).strip()
-                    rank = int(_get_required_column(row, RANK_COLUMN, 'RANK_COLUMN', filename) or 0)
-                    team = _get_required_column(row, TEAM_COLUMN, 'TEAM_COLUMN', filename).strip()
-                    position = _get_required_column(row, POSITION_COLUMN, 'POSITION_COLUMN', filename).strip()
+                    player_name = get_required_column(row, PLAYER_NAME_COLUMN, 'PLAYER_NAME_COLUMN', filename).strip()
+                    rank = int(get_required_column(row, RANK_COLUMN, 'RANK_COLUMN', filename) or 0)
+                    team = get_required_column(row, TEAM_COLUMN, 'TEAM_COLUMN', filename).strip()
+                    position = get_required_column(row, POSITION_COLUMN, 'POSITION_COLUMN', filename).strip()
 
                     # Handle D/ST naming convention
                     if position == 'DST':
@@ -197,7 +176,7 @@ def load_rankings(scoring_type='half'):
                             player_name = f'{player_name} D/ST'
 
                         # Normalize D/ST names to use short team names
-                        normalized_name = _normalize_name(player_name)
+                        normalized_name = normalize_name(player_name)
                         if normalized_name != player_name.lower().strip():
                             player_name = f'{normalized_name.title()} D/ST'
 
@@ -251,73 +230,10 @@ def find_player_ranking(player_name, position, rankings):
 
     # Try partial matching for other positions
     for ranked_name in rankings[position]:
-        if _names_match(player_name, ranked_name):
+        if names_match(player_name, ranked_name):
             return rankings[position][ranked_name]
 
     return None
-
-
-def _names_match(name1, name2):
-    """Check if two player names likely refer to the same player."""
-    # Normalize names first
-    name1_normalized = _normalize_name(name1)
-    name2_normalized = _normalize_name(name2)
-
-    # Exact match after normalization
-    if name1_normalized == name2_normalized:
-        return True
-
-    # Check if one name contains the other
-    return bool(name1_normalized in name2_normalized or name2_normalized in name1_normalized)
-
-
-def _normalize_name(name):
-    """Normalize player names to handle common variations."""
-    if not name:
-        return ''
-
-    # Convert to lowercase for comparison
-    normalized = name.lower().strip()
-
-    # Common name replacements for regular players
-    replacements = {
-        # Suffix variations
-        ' jr.': '',
-        ' jr': '',
-        ' sr.': '',
-        ' sr': '',
-        ' iii': '',
-        ' ii': '',
-        ' iv': '',
-        ' v': '',
-        "'": '',
-        '-': '',
-        '.': '',
-        # Specific player name variations
-        'tetairoa mcmillan': 'tet mcmillan',
-        'zonovan knight': 'bam knight',
-        'kenny gainwell': 'kenneth gainwell',
-    }
-
-    # Apply replacements
-    for old, new in replacements.items():
-        normalized = normalized.replace(old, new)
-
-    return normalized.strip()
-
-
-def _print_position_players(position, players):
-    """Helper function to print players for a specific position."""
-    print(f'\n{position}:')
-    print('-' * 30)
-
-    sorted_players = sorted(players, key=lambda x: x['totalPoints'], reverse=True)
-
-    for i, player in enumerate(sorted_players, 1):
-        injury_status = ' (INJURED)' if player['injured'] else ''
-        print(
-            f'{i:2d}. {player["name"]:<25} | {player["proTeam"]:<3} | {player["totalPoints"]:>6.1f} pts{injury_status}'
-        )
 
 
 def get_available_players_by_position(rankings, all_owned_players):
@@ -334,16 +250,16 @@ def get_available_players_by_position(rankings, all_owned_players):
                 is_owned = True
             else:
                 # Normalize the ranking player name
-                normalized_ranking_name = _normalize_name(player_name)
+                normalized_ranking_name = normalize_name(player_name)
 
                 # Check against all owned players (both original and normalized)
                 for owned_name in all_owned_players:
-                    normalized_owned_name = _normalize_name(owned_name)
+                    normalized_owned_name = normalize_name(owned_name)
 
                     # Check various matching scenarios
                     if (
                         normalized_ranking_name == normalized_owned_name
-                        or _names_match(player_name, owned_name)
+                        or names_match(player_name, owned_name)
                         or (position == 'D/ST' and normalized_ranking_name in normalized_owned_name)
                         or (position == 'D/ST' and normalized_owned_name in normalized_ranking_name)
                     ):
@@ -608,18 +524,6 @@ def save_markdown():
         print(f'✅ Successfully saved analysis to {output_file}')
     except (OSError, TypeError) as e:
         print(f'❌ Error saving to {output_file}: {e}')
-
-
-def _get_required_column(row, column_name, column_var_name, filename):
-    """Get a required column's value from a CSV row, raising a helpful error if missing."""
-    value = row.get(column_name)
-    if value is None:
-        raise ValueError(
-            f"Column '{column_name}' not found in {filename}. "
-            f'Available columns: {list(row.keys())}. '
-            f'Update {column_var_name} at the top of output_rankings.py to match your CSV headers.'
-        )
-    return value
 
 
 def main():
