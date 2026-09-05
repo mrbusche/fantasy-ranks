@@ -6,7 +6,6 @@ Analyzes a team's roster against weekly rankings and finds top available players
 
 import csv
 import json
-import sys
 from collections import defaultdict
 from pathlib import Path
 
@@ -14,10 +13,6 @@ from shared_functions import load_league_config
 
 # Global variable to store markdown content
 markdown_content = []
-
-# Set UTF-8 encoding for stdout to handle Unicode characters
-if sys.stdout.encoding != 'utf-8':
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 BASE_DIR = Path(__file__).parent
 RANKINGS_DIR = BASE_DIR.parent / 'rankings'
@@ -43,7 +38,6 @@ def load_custom_owned_players(file_path):
         # Resolve path relative to script directory if it's not absolute
         path = Path(file_path)
         if not path.is_absolute():
-            BASE_DIR = Path(__file__).parent
             path = BASE_DIR / path
 
         with open(path, 'r', encoding='utf-8') as file:
@@ -366,7 +360,7 @@ def get_available_players_by_position(rankings, all_owned_players):
 
 
 def safe_print(text):
-    """Add text to markdown content instead of printing"""
+    """Add text to Markdown content instead of printing"""
     markdown_content.append(text)
 
 
@@ -599,7 +593,7 @@ def output_rankings(
 
 
 def save_markdown():
-    """Save the markdown content to start-sit.md"""
+    """Save the Markdown content to start-sit.md"""
     output_file = Path(__file__).parent.parent / 'lineups' / 'start-sit.md'
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -654,7 +648,7 @@ def main():
             scoring_type=league['scoring_type'],
             league_type=league['platform'],
             file_prefix=f'{league["platform"]}_{league["league_id"]}',
-            league_name=league['league_name'],
+            league_name = league.get('league_name', ''),
             custom_owned_path=league.get('custom_owned_file'),
         )
 

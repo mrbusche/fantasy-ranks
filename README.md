@@ -13,8 +13,8 @@ Create a file named config.json in the root, separate multiple leagues with a co
       "platform": "", # espn or sleeper
       "league_id": "", # get this from the website URL
       "scoring_type": "", # half or ppr
-      "league_name": "", # this will display in the generated files
-      "team_name": "" # your exact team name in the league
+      "team_name": "", # your exact team name in the league
+      "league_name": "" # not required but will help differentiate leagues
     }
   ]
 }
@@ -27,3 +27,9 @@ RANKINGS_URL=https://some-website.com?week={week}&export=csv
 ```
 
 If you found this website you can figure out how your favorite rankings site exposes their rankings, you will want this exported as csv
+
+## Generating lineups
+
+```shell
+uv run python main.py
+```

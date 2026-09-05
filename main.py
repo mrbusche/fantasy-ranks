@@ -116,7 +116,7 @@ def main():
         platform = league['platform']
         league_id = league['league_id']
         ppr_type = league['scoring_type']
-        league_name = league['league_name']
+        league_name = league.get('league_name', '')
 
         if platform not in platform_leagues:
             platform_leagues[platform] = []
