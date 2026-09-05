@@ -602,7 +602,8 @@ def output_rankings(
 
 def save_markdown():
     """Save the markdown content to start-sit.md"""
-    output_file = Path(__file__).parent / 'start-sit.md'
+    output_file = Path(__file__).parent.parent / 'lineups' / 'start-sit.md'
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     try:
         with open(output_file, 'w', encoding='utf-8') as f:
