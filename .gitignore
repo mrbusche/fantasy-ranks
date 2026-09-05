@@ -14,3 +14,4 @@ rosters/*_owned_players.json
 rosters/sleeper_master_players.json
 
 **/__pycache__/*
+.coverage

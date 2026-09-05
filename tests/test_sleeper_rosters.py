@@ -193,3 +193,13 @@ def test_main_db_load_failure(monkeypatch):
         patch('scripts.sleeper_rosters.get_all_players_db', return_value={}),
     ):
         main()
+
+
+def test_main_processing_error(monkeypatch):
+    monkeypatch.setattr('sys.argv', ['sleeper_rosters.py', '--league-id', '999'])
+    with (
+        patch('scripts.sleeper_rosters.needs_refresh', return_value=True),
+        patch('scripts.sleeper_rosters.get_all_players_db', return_value={'p1': {}}),
+        patch('scripts.sleeper_rosters.get_league_users', side_effect=ValueError('bad data')),
+    ):
+        main()

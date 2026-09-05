@@ -55,6 +55,13 @@ def test_load_custom_owned_players_errors(tmp_path):
     assert load_custom_owned_players(bad_json) == set()
 
 
+def test_load_custom_owned_players_resolves_relative_path(tmp_path):
+    custom_file = tmp_path / 'custom.json'
+    custom_file.write_text('["Player One"]', encoding='utf-8')
+    with patch('scripts.output_rankings.BASE_DIR', tmp_path):
+        assert load_custom_owned_players('custom.json') == {'Player One'}
+
+
 def test_get_team_players():
     data = {'Team 1': [{'name': 'P1'}], 'Team 2': [{'name': 'P2'}]}
     assert get_team_players(data, 'Team 1') == [{'name': 'P1'}]
@@ -100,6 +107,18 @@ def test_load_rankings(tmp_path):
         assert 'Saquon Barkley' in rankings['RB']
         assert 'D/ST' in rankings
         assert 'K' in rankings
+
+
+def test_load_rankings_handles_missing_file_and_d_st_normalization(tmp_path):
+    dst_csv = tmp_path / 'dst.csv'
+    dst_csv.write_text('Rank,Player Name,Team,Position\n1,San Francisco 49ers,SF,DST\n', encoding='utf-8')
+    with patch('scripts.output_rankings.RANKINGS_DIR', tmp_path):
+        rankings = load_rankings('half')
+    assert rankings['D/ST']['San Francisco 49ers D/ST']['position'] == 'D/ST'
+
+
+def test_find_player_ranking_returns_none_for_unknown_position():
+    assert find_player_ranking('Unknown', 'QB', {}) is None
 
 
 def test_find_player_ranking():
@@ -198,6 +217,56 @@ def test_print_combined_position_rankings():
     assert 'Lamar Jackson' in output_text
     assert '🏆 Team' in output_text
     assert '⚡ Free' in output_text
+
+
+def test_print_combined_position_rankings_includes_unranked_players():
+    output_rankings_mod.markdown_content = []
+    players = {
+        'WR': [{'name': 'Unranked', 'proTeam': 'FA', 'totalPoints': 12.0}],
+    }
+    print_combined_position_rankings(players, set(), {'WR': {}}, 'Team', 'League')
+    output = '\n'.join(output_rankings_mod.markdown_content)
+    assert '| Unranked | FA | WR | 12.0 |' in output
+
+
+def test_output_rankings_custom_file_and_missing_rankings(tmp_path):
+    owned_file = tmp_path / 'espn_123_owned_players.json'
+    owned_file.write_text(json.dumps({'Team A': []}), encoding='utf-8')
+    custom_file = tmp_path / 'custom.json'
+    custom_file.write_text('["Player A"]', encoding='utf-8')
+    with (
+        patch('scripts.output_rankings.ROSTERS_DIR', tmp_path),
+        patch('scripts.output_rankings.load_rankings', return_value={}),
+    ):
+        assert output_rankings('Team A', 'half', 'espn', 'espn_123', 'League', custom_file) is False
+
+
+def test_save_markdown_reports_write_error():
+    with patch('scripts.output_rankings.open', side_effect=OSError('read-only')):
+        output_rankings_mod.save_markdown()
+
+
+def test_output_main_handles_empty_and_invalid_leagues():
+    with patch('scripts.output_rankings.load_league_config', return_value=None):
+        output_rankings_mod.main()
+    with patch('scripts.output_rankings.load_league_config', return_value={'leagues': []}):
+        output_rankings_mod.main()
+
+
+def test_output_main_processes_multiple_leagues_and_failures():
+    config = {
+        'leagues': [
+            {'team_name': 'Missing', 'scoring_type': 'half'},
+            {'team_name': 'Team A', 'scoring_type': 'half', 'league_id': '1', 'platform': 'espn'},
+            {'team_name': 'Team B', 'scoring_type': 'half', 'league_id': '2', 'platform': 'espn'},
+        ]
+    }
+    with (
+        patch('scripts.output_rankings.load_league_config', return_value=config),
+        patch('scripts.output_rankings.output_rankings', side_effect=[False, True]),
+        patch('scripts.output_rankings.save_markdown'),
+    ):
+        output_rankings_mod.main()
 
 
 def test_output_rankings_flow(tmp_path):

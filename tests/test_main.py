@@ -21,6 +21,11 @@ def test_run_script_exception():
         run_script('scripts/download_weekly_rankings.py')
 
 
+def test_run_script_subprocess_error():
+    with patch('subprocess.run', side_effect=ValueError('invalid command')):
+        run_script('scripts/download_weekly_rankings.py')
+
+
 def test_run_platform_leagues(tmp_path):
     # Test script not found
     with patch('main.Path') as mock_path:
@@ -36,6 +41,18 @@ def test_run_platform_leagues(tmp_path):
         mock_path.return_value.parent.__truediv__.return_value = tmp_path
         run_platform_leagues('espn', [('123', 'half', 'My League')])
         assert mock_run.called
+
+
+def test_run_platform_leagues_failure_and_exception(tmp_path):
+    dummy_script = tmp_path / 'espn_rosters.py'
+    dummy_script.write_text('# dummy', encoding='utf-8')
+    with patch('main.Path') as mock_path, patch('subprocess.run', return_value=MagicMock(returncode=1)):
+        mock_path.return_value.parent.__truediv__.return_value = tmp_path
+        run_platform_leagues('espn', [('123', 'half', 'My League')])
+
+    with patch('main.Path') as mock_path, patch('subprocess.run', side_effect=OSError('failed')):
+        mock_path.return_value.parent.__truediv__.return_value = tmp_path
+        run_platform_leagues('espn', [('123', 'half', 'My League')])
 
 
 def test_main_no_config():
