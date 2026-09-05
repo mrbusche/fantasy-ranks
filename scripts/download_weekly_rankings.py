@@ -11,25 +11,18 @@ if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
 
 
-def get_current_nfl_week():
-    """Calculate the current NFL week based on Wednesday-Tuesday schedule.
-    Week 10 starts on 11/5/2024 (Tuesday), but we use Wednesday as the start of each week.
-    """
-    # Week 1 reference date (Sept 9 2026 - Wednesday)
+def get_current_nfl_week(current_date=None):
+    """Calculate the current NFL week based on Wednesday-Tuesday schedule."""
     week_1_start = datetime(2026, 9, 9, tzinfo=UTC)
-    current_date = datetime.now(UTC)
+    if current_date is None:
+        current_date = datetime.now(UTC)
 
     # Calculate days since week 1 started
     days_since_week_1 = (current_date - week_1_start).days
+    print(f'Days since week 1 started: {days_since_week_1}')
 
     # Calculate current week (each week is 7 days, starting Wednesday)
-    current_week = 10 + (days_since_week_1 // 7)
-
-    # If we're before Wednesday of the current week, use previous week
-    # (since rankings are typically for the upcoming week)
-    current_weekday = current_date.weekday()  # Monday = 0, Sunday = 6
-    if current_weekday < 2:  # Monday (0) or Tuesday (1)
-        current_week -= 1
+    current_week = 1 + (days_since_week_1 // 7)
 
     return max(1, min(current_week, 18))  # Clamp between weeks 1-18
 
