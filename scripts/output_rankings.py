@@ -372,7 +372,7 @@ def safe_print(text):
 
 def print_combined_position_rankings(players_by_position, all_owned_players, rankings, team_name, league_name):
     """Print team's players combined with top 5 available for each position."""
-    safe_print(f'## COMBINED RANKINGS: {league_name.upper()} {team_name.upper()} + TOP 5 AVAILABLE BY POSITION')
+    safe_print(f'### COMBINED RANKINGS: {league_name.upper()} {team_name.upper()} + TOP 5 AVAILABLE BY POSITION')
     safe_print('')
 
     # Get available players from rankings
@@ -459,7 +459,7 @@ def print_combined_position_rankings(players_by_position, all_owned_players, ran
         # Sort by rank
         all_players.sort(key=lambda x: x['rank'])
 
-        safe_print(f'### {position}:')
+        safe_print(f'#### {position}')
         safe_print('')
 
         # Add position column for Flex rankings
@@ -544,7 +544,8 @@ def output_rankings(
         bool: True if analysis completed successfully, False otherwise
     """
 
-    safe_print(f'# 🏈 Analyzing team: {team_name}')
+    safe_print(f'## 🏈 Analyzing team: {team_name}')
+    safe_print('')
     if league_type:
         safe_print(f'- **League type:** {league_type.upper()}')
     if file_prefix:
@@ -585,9 +586,6 @@ def output_rankings(
             all_owned_players.update(custom_owned)
             safe_print(f'  - Added {len(all_owned_players) - count_before} players from custom list')
 
-    # Load rankings
-    safe_print('*Loading weekly rankings...*')
-    safe_print('')
     rankings = load_rankings(scoring_type)
 
     if not rankings:
