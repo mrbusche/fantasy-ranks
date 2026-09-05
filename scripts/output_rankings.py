@@ -648,7 +648,7 @@ def main():
             scoring_type=league['scoring_type'],
             league_type=league['platform'],
             file_prefix=f'{league["platform"]}_{league["league_id"]}',
-            league_name = league.get('league_name', ''),
+            league_name=league.get('league_name', ''),
             custom_owned_path=league.get('custom_owned_file'),
         )
 

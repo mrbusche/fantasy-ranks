@@ -5,7 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 authors = [{ name = "Matt Busche", email = "mrbusche@gmail.com" }]
 requires-python = ">=3.14"
-dependencies = ["espn-api>=0.46.0"]
+dependencies = [
+    "espn-api>=0.46.0",
+    "requests>=2.34.2",
+]
 
 [dependency-groups]
 dev = ["ruff>=0.16.6"]

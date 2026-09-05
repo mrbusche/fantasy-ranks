@@ -103,22 +103,22 @@ def main():
 
     args = parser.parse_args()
 
-    LEAGUE_ID = args.league_id
+    league_id = args.league_id
 
     # Files go in current directory (sleeper/) since script runs from there
-    OWNED_FILE = os.path.join(ROSTERS_DIR, f'sleeper_{LEAGUE_ID}_owned_players.json')
+    owned_file = os.path.join(ROSTERS_DIR, f'sleeper_{league_id}_owned_players.json')
 
-    print(f'Processing Sleeper League {LEAGUE_ID} (PPR: {args.ppr})')
+    print(f'Processing Sleeper League {league_id} (PPR: {args.ppr})')
 
     # --- 1. Cache Check for Final Output ---
-    if not needs_refresh(OWNED_FILE, DATA_CACHE_DURATION) and not needs_refresh(
+    if not needs_refresh(owned_file, DATA_CACHE_DURATION) and not needs_refresh(
         MASTER_PLAYERS_FILE, MASTER_DB_CACHE_DURATION
     ):
-        age = time.time() - os.path.getmtime(OWNED_FILE)
+        age = time.time() - os.path.getmtime(owned_file)
         print(f'CACHE HIT: Sleeper data is recent. Next update in {int((DATA_CACHE_DURATION - age) / 60)} minutes.')
         return
 
-    print(f'Starting Sleeper update for League {LEAGUE_ID}...')
+    print(f'Starting Sleeper update for League {league_id}...')
 
     # --- 2. Load Master Data ---
     # We need this for EVERYTHING, so we load it first.
@@ -130,8 +130,8 @@ def main():
     try:
         # --- 3. Fetch League Data ---
         print('Fetching league rosters and users...')
-        users_map = get_league_users(LEAGUE_ID)
-        rosters = get_league_rosters(LEAGUE_ID)
+        users_map = get_league_users(league_id)
+        rosters = get_league_rosters(league_id)
 
         owned_player_ids = set()
         final_roster_data = {}
@@ -151,9 +151,6 @@ def main():
                 owned_player_ids.add(pid)
                 # Build the player object
                 p_data = extract_player_data(pid, player_db)
-
-                # Optional: Add roster specific info like if they are starters
-                # starters list in Sleeper is also just IDs
                 is_starter = pid in (roster.get('starters') or [])
                 p_data['roster_status'] = 'Starter' if is_starter else 'Bench'
 
@@ -163,9 +160,9 @@ def main():
 
         # Save Owned
         os.makedirs(ROSTERS_DIR, exist_ok=True)
-        with open(OWNED_FILE, 'w') as f:
+        with open(owned_file, 'w') as f:
             json.dump(final_roster_data, f, indent=4)
-        print(f'SUCCESS: Saved rosters to {OWNED_FILE}')
+        print(f'SUCCESS: Saved rosters to {owned_file}')
 
     except (requests.RequestException, ValueError, OSError, TypeError, KeyError) as e:
         import traceback

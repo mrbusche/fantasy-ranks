@@ -4,7 +4,7 @@ Generate lineups for your Sleeper and ESPN leagues
 
 ## Setup
 
-Create a file named config.json in the root, separate multiple leagues with a comma, valid json is required
+Create a file named config.json in the root, separate multiple leagues with a comma, valid JSON is required
 
 ```json
 {

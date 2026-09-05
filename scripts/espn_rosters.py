@@ -28,7 +28,7 @@ def file_needs_update(filepath, max_age_hours=1):
     return file_mod_time < age_threshold
 
 
-def check_if_update_needed_for_league(league_id, ppr_type):
+def check_if_update_needed_for_league(league_id):
     """Check if the ESPN data file for this specific league needs updating."""
     owned_file = os.path.join(ROSTERS_DIR, f'espn_{league_id}_owned_players.json')
 
@@ -90,7 +90,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    if check_if_update_needed_for_league(args.league_id, args.ppr):
+    if check_if_update_needed_for_league(args.league_id):
         print('Fetching and exporting ESPN data...')
         fetch_and_export_data(args.league_id, DEFAULT_YEAR, args.ppr, SWID, ESPN_S2)
     else:
