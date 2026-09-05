@@ -1,4 +1,5 @@
 import csv
+import io
 import os
 import sys
 import urllib.error
@@ -7,7 +8,7 @@ from datetime import UTC, datetime, timedelta
 
 from dotenv import load_dotenv
 
-if hasattr(sys.stdout, 'reconfigure'):
+if isinstance(sys.stdout, io.TextIOWrapper):
     sys.stdout.reconfigure(encoding='utf-8')
 
 
@@ -89,6 +90,8 @@ def download_file(url, filename):
 
             # Handle different column name variations
             fieldnames = reader.fieldnames
+            if fieldnames is None:
+                raise csv.Error('CSV header is missing')
             column_mapping = {}
 
             # Map actual column names to our desired names

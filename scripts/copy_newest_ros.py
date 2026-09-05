@@ -3,7 +3,10 @@ import os
 import shutil
 from pathlib import Path
 
-REST_OF_SEASON_RANKINGS_PATTERN = 'ETR Rest of Season Top 150*.csv'
+from dotenv import load_dotenv
+
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+REST_OF_SEASON_RANKINGS_PATTERN = os.environ.get('REST_OF_SEASON_RANKINGS_PATTERN', 'Ranks*.csv')
 
 
 def clean_csv_content(input_file, output_file):
@@ -39,7 +42,7 @@ def clean_csv_content(input_file, output_file):
 def copy_newest_ros_file():
     downloads_path = Path.home() / 'Downloads'
 
-    pattern = str(downloads_path / REST_OF_SEASON_RANKINGS_PATTERN)
+    pattern = str(downloads_path / str(REST_OF_SEASON_RANKINGS_PATTERN))
 
     matching_files = glob.glob(pattern)
 
