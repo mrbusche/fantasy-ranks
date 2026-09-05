@@ -1,12 +1,14 @@
+.env
+.idea
 .ruff_cache
 .venv
-.env
 
 config.json
 rankings/*.csv
+
+lineups/start-sit.md
 
 rosters/*_owned_players.json
 rosters/sleeper_master_players.json
 
 scripts/__pycache__/shared_functions.cpython-314.pyc
-lineups/start-sit.md
