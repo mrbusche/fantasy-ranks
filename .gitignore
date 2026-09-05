@@ -4,5 +4,9 @@
 
 config.json
 rankings/*.csv
+
 rosters/*_owned_players.json
 rosters/sleeper_master_players.json
+
+scripts/__pycache__/shared_functions.cpython-314.pyc
+scripts/start-sit.md
