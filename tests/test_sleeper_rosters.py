@@ -1,11 +1,11 @@
 import json
 import os
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import requests
 
-from scripts.sleeper_rosters import (
+from fantasy_ranks.sleeper_rosters import (
     extract_player_data,
     get_all_players_db,
     get_league_rosters,
@@ -40,25 +40,22 @@ def test_get_all_players_db_from_cache(tmp_path):
     cache_file.write_text(json.dumps(expected_data), encoding='utf-8')
 
     with (
-        patch('scripts.sleeper_rosters.MASTER_PLAYERS_FILE', str(cache_file)),
-        patch('scripts.sleeper_rosters.needs_refresh', return_value=False),
+        patch('fantasy_ranks.sleeper_rosters.MASTER_PLAYERS_FILE', str(cache_file)),
+        patch('fantasy_ranks.sleeper_rosters.needs_refresh', return_value=False),
     ):
         result = get_all_players_db()
         assert result == expected_data
 
 
-def test_get_all_players_db_from_api(tmp_path):
+def test_get_all_players_db_from_api(tmp_path, mock_requests_response):
     cache_file = tmp_path / 'sleeper_master_players.json'
     api_data = {'456': {'first_name': 'Lamar', 'last_name': 'Jackson'}}
-
-    mock_resp = MagicMock()
-    mock_resp.json.return_value = api_data
-    mock_resp.raise_for_status.return_value = None
+    mock_resp = mock_requests_response(api_data)
 
     with (
-        patch('scripts.sleeper_rosters.MASTER_PLAYERS_FILE', str(cache_file)),
-        patch('scripts.sleeper_rosters.ROSTERS_DIR', str(tmp_path)),
-        patch('scripts.sleeper_rosters.needs_refresh', return_value=True),
+        patch('fantasy_ranks.sleeper_rosters.MASTER_PLAYERS_FILE', str(cache_file)),
+        patch('fantasy_ranks.sleeper_rosters.ROSTERS_DIR', str(tmp_path)),
+        patch('fantasy_ranks.sleeper_rosters.needs_refresh', return_value=True),
         patch('requests.get', return_value=mock_resp),
     ):
         result = get_all_players_db()
@@ -68,22 +65,20 @@ def test_get_all_players_db_from_api(tmp_path):
 
 def test_get_all_players_db_api_error():
     with (
-        patch('scripts.sleeper_rosters.needs_refresh', return_value=True),
+        patch('fantasy_ranks.sleeper_rosters.needs_refresh', return_value=True),
         patch('requests.get', side_effect=requests.RequestException('Network error')),
     ):
         result = get_all_players_db()
         assert result == {}
 
 
-def test_get_league_users():
+def test_get_league_users(mock_requests_response):
     mock_users = [
         {'user_id': 'u1', 'display_name': 'User One', 'metadata': {'team_name': 'Team Alpha'}},
         {'user_id': 'u2', 'display_name': 'User Two', 'metadata': {}},
         {'user_id': 'u3', 'display_name': None, 'metadata': {}},
     ]
-    mock_resp = MagicMock()
-    mock_resp.json.return_value = mock_users
-    mock_resp.raise_for_status.return_value = None
+    mock_resp = mock_requests_response(mock_users)
 
     with patch('requests.get', return_value=mock_resp):
         user_map = get_league_users('league_123')
@@ -93,11 +88,9 @@ def test_get_league_users():
     assert user_map['u3'] == 'Unknown Team'
 
 
-def test_get_league_rosters():
+def test_get_league_rosters(mock_requests_response):
     mock_rosters = [{'roster_id': 1, 'owner_id': 'u1', 'players': ['1', '2']}]
-    mock_resp = MagicMock()
-    mock_resp.json.return_value = mock_rosters
-    mock_resp.raise_for_status.return_value = None
+    mock_resp = mock_requests_response(mock_rosters)
 
     with patch('requests.get', return_value=mock_resp):
         rosters = get_league_rosters('league_123')
@@ -154,7 +147,7 @@ def test_extract_player_data_defense_and_defaults():
 def test_main_cached(monkeypatch):
     monkeypatch.setattr('sys.argv', ['sleeper_rosters.py', '--league-id', '999'])
     with (
-        patch('scripts.sleeper_rosters.needs_refresh', return_value=False),
+        patch('fantasy_ranks.sleeper_rosters.needs_refresh', return_value=False),
         patch('os.path.getmtime', return_value=time.time()),
     ):
         main()
@@ -170,11 +163,11 @@ def test_main_full_flow(monkeypatch, tmp_path):
     rosters = [{'owner_id': 'u1', 'players': ['p1'], 'starters': ['p1']}]
 
     with (
-        patch('scripts.sleeper_rosters.ROSTERS_DIR', str(tmp_path)),
-        patch('scripts.sleeper_rosters.needs_refresh', return_value=True),
-        patch('scripts.sleeper_rosters.get_all_players_db', return_value=player_db),
-        patch('scripts.sleeper_rosters.get_league_users', return_value=users),
-        patch('scripts.sleeper_rosters.get_league_rosters', return_value=rosters),
+        patch('fantasy_ranks.sleeper_rosters.ROSTERS_DIR', str(tmp_path)),
+        patch('fantasy_ranks.sleeper_rosters.needs_refresh', return_value=True),
+        patch('fantasy_ranks.sleeper_rosters.get_all_players_db', return_value=player_db),
+        patch('fantasy_ranks.sleeper_rosters.get_league_users', return_value=users),
+        patch('fantasy_ranks.sleeper_rosters.get_league_rosters', return_value=rosters),
     ):
         main()
 
@@ -189,8 +182,8 @@ def test_main_full_flow(monkeypatch, tmp_path):
 def test_main_db_load_failure(monkeypatch):
     monkeypatch.setattr('sys.argv', ['sleeper_rosters.py', '--league-id', '999'])
     with (
-        patch('scripts.sleeper_rosters.needs_refresh', return_value=True),
-        patch('scripts.sleeper_rosters.get_all_players_db', return_value={}),
+        patch('fantasy_ranks.sleeper_rosters.needs_refresh', return_value=True),
+        patch('fantasy_ranks.sleeper_rosters.get_all_players_db', return_value={}),
     ):
         main()
 
@@ -198,8 +191,8 @@ def test_main_db_load_failure(monkeypatch):
 def test_main_processing_error(monkeypatch):
     monkeypatch.setattr('sys.argv', ['sleeper_rosters.py', '--league-id', '999'])
     with (
-        patch('scripts.sleeper_rosters.needs_refresh', return_value=True),
-        patch('scripts.sleeper_rosters.get_all_players_db', return_value={'p1': {}}),
-        patch('scripts.sleeper_rosters.get_league_users', side_effect=ValueError('bad data')),
+        patch('fantasy_ranks.sleeper_rosters.needs_refresh', return_value=True),
+        patch('fantasy_ranks.sleeper_rosters.get_all_players_db', return_value={'p1': {}}),
+        patch('fantasy_ranks.sleeper_rosters.get_league_users', side_effect=ValueError('bad data')),
     ):
         main()

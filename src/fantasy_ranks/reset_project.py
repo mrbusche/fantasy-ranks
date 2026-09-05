@@ -6,9 +6,8 @@ TARGET_DIRS = ['rankings', 'rosters', 'lineups']
 
 
 def reset_project() -> None:
-    # Resolve the project root (one level up from scripts/)
-    scripts_dir = Path(__file__).resolve().parent
-    project_root = scripts_dir.parent
+    # Resolve the project root (two levels up from src/fantasy_ranks/)
+    project_root = Path(__file__).resolve().parent.parent.parent
 
     print(f'Project root: {project_root}')
 

@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pytest
 
-from scripts.download_weekly_rankings import (
+from fantasy_ranks.download_weekly_rankings import (
     download_file,
     file_needs_update,
     get_current_nfl_week,
@@ -138,7 +138,7 @@ def test_download_file_network_error(tmp_path):
 def test_main_raises_when_env_not_set(monkeypatch):
     monkeypatch.delenv('RANKINGS_URL', raising=False)
     with (
-        patch('scripts.download_weekly_rankings.load_dotenv'),
+        patch('fantasy_ranks.download_weekly_rankings.load_dotenv'),
         pytest.raises(RuntimeError, match='RANKINGS_URL is not set'),
     ):
         main()
@@ -147,9 +147,9 @@ def test_main_raises_when_env_not_set(monkeypatch):
 def test_main_success(monkeypatch, tmp_path):
     monkeypatch.setenv('RANKINGS_URL', 'http://example.com/rankings?week={week}')
     with (
-        patch('scripts.download_weekly_rankings.load_dotenv'),
-        patch('scripts.download_weekly_rankings.file_needs_update', return_value=True),
-        patch('scripts.download_weekly_rankings.download_file') as mock_download,
+        patch('fantasy_ranks.download_weekly_rankings.load_dotenv'),
+        patch('fantasy_ranks.download_weekly_rankings.file_needs_update', return_value=True),
+        patch('fantasy_ranks.download_weekly_rankings.download_file') as mock_download,
         patch('os.makedirs'),
     ):
         main()
@@ -159,9 +159,9 @@ def test_main_success(monkeypatch, tmp_path):
 def test_main_files_already_recent(monkeypatch):
     monkeypatch.setenv('RANKINGS_URL', 'http://example.com/rankings?week={week}')
     with (
-        patch('scripts.download_weekly_rankings.load_dotenv'),
-        patch('scripts.download_weekly_rankings.file_needs_update', return_value=False),
-        patch('scripts.download_weekly_rankings.download_file') as mock_download,
+        patch('fantasy_ranks.download_weekly_rankings.load_dotenv'),
+        patch('fantasy_ranks.download_weekly_rankings.file_needs_update', return_value=False),
+        patch('fantasy_ranks.download_weekly_rankings.download_file') as mock_download,
         patch('os.path.getmtime', return_value=1700000000),
         patch('os.makedirs'),
     ):

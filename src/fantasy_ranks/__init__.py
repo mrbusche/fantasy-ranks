@@ -1,2 +1,1 @@
-def main() -> None:
-    print('Hello from fantasy-ranks!')
+"""fantasy_ranks: fantasy football roster and rankings automation package."""

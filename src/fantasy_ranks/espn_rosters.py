@@ -2,17 +2,20 @@ import argparse
 import json
 import os
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 from espn_api.football import League
 
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+load_dotenv(PROJECT_ROOT / '.env')
 
 # --- Default Configuration ---
 DEFAULT_YEAR = 2026
 ESPN_SWID = os.environ.get('ESPN_SWID')
 ESPN_S2 = os.environ.get('ESPN_S2')
-ROSTERS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'rosters')
+ROSTERS_DIR = os.path.join(PROJECT_ROOT, 'rosters')
 
 
 # Only refresh files once an hour by default

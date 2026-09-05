@@ -9,7 +9,7 @@ import json
 from collections import defaultdict
 from pathlib import Path
 
-from shared_functions import (
+from fantasy_ranks.shared_functions import (
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -22,8 +22,9 @@ from shared_functions import (
 markdown_content = []
 
 BASE_DIR = Path(__file__).parent
-RANKINGS_DIR = BASE_DIR.parent / 'rankings'
-ROSTERS_DIR = BASE_DIR.parent / 'rosters'
+PROJECT_ROOT = BASE_DIR.resolve().parent.parent
+RANKINGS_DIR = PROJECT_ROOT / 'rankings'
+ROSTERS_DIR = PROJECT_ROOT / 'rosters'
 
 PLAYER_NAME_COLUMN = 'Player Name'
 POSITION_COLUMN = 'Position'
@@ -515,7 +516,7 @@ def output_rankings(
 
 def save_markdown():
     """Save the Markdown content to start-sit.md"""
-    output_file = Path(__file__).parent.parent / 'lineups' / 'start-sit.md'
+    output_file = Path(__file__).resolve().parent.parent.parent / 'lineups' / 'start-sit.md'
     output_file.parent.mkdir(parents=True, exist_ok=True)
 
     try:

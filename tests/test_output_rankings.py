@@ -2,8 +2,8 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import scripts.output_rankings as output_rankings_mod
-from scripts.output_rankings import (
+import fantasy_ranks.output_rankings as output_rankings_mod
+from fantasy_ranks.output_rankings import (
     find_player_ranking,
     get_available_players_by_position,
     get_team_players,
@@ -58,7 +58,7 @@ def test_load_custom_owned_players_errors(tmp_path):
 def test_load_custom_owned_players_resolves_relative_path(tmp_path):
     custom_file = tmp_path / 'custom.json'
     custom_file.write_text('["Player One"]', encoding='utf-8')
-    with patch('scripts.output_rankings.BASE_DIR', tmp_path):
+    with patch('fantasy_ranks.output_rankings.BASE_DIR', tmp_path):
         assert load_custom_owned_players('custom.json') == {'Player One'}
 
 
@@ -99,7 +99,7 @@ def test_load_rankings(tmp_path):
     kicker_csv = tmp_path / 'kicker.csv'
     kicker_csv.write_text('Rank,Player Name,Team,Position\n1,Justin Tucker,BAL,K\n', encoding='utf-8')
 
-    with patch('scripts.output_rankings.RANKINGS_DIR', tmp_path):
+    with patch('fantasy_ranks.output_rankings.RANKINGS_DIR', tmp_path):
         rankings = load_rankings('half')
         assert 'QB' in rankings
         assert 'Josh Allen' in rankings['QB']
@@ -112,7 +112,7 @@ def test_load_rankings(tmp_path):
 def test_load_rankings_handles_missing_file_and_d_st_normalization(tmp_path):
     dst_csv = tmp_path / 'dst.csv'
     dst_csv.write_text('Rank,Player Name,Team,Position\n1,San Francisco 49ers,SF,DST\n', encoding='utf-8')
-    with patch('scripts.output_rankings.RANKINGS_DIR', tmp_path):
+    with patch('fantasy_ranks.output_rankings.RANKINGS_DIR', tmp_path):
         rankings = load_rankings('half')
     assert rankings['D/ST']['San Francisco 49ers D/ST']['position'] == 'D/ST'
 
@@ -175,11 +175,12 @@ def test_safe_print_and_save_markdown(tmp_path):
     def fake_path(p):
         if str(p) == output_rankings_mod.__file__:
             mock_obj = MagicMock()
-            mock_obj.parent.parent = tmp_path
+            mock_obj.resolve.return_value = mock_obj
+            mock_obj.parent.parent.parent = tmp_path
             return mock_obj
         return Path(p)
 
-    with patch('scripts.output_rankings.Path', side_effect=fake_path):
+    with patch('fantasy_ranks.output_rankings.Path', side_effect=fake_path):
         save_markdown()
 
     assert out_file.exists()
@@ -235,21 +236,21 @@ def test_output_rankings_custom_file_and_missing_rankings(tmp_path):
     custom_file = tmp_path / 'custom.json'
     custom_file.write_text('["Player A"]', encoding='utf-8')
     with (
-        patch('scripts.output_rankings.ROSTERS_DIR', tmp_path),
-        patch('scripts.output_rankings.load_rankings', return_value={}),
+        patch('fantasy_ranks.output_rankings.ROSTERS_DIR', tmp_path),
+        patch('fantasy_ranks.output_rankings.load_rankings', return_value={}),
     ):
         assert output_rankings('Team A', 'half', 'espn', 'espn_123', 'League', custom_file) is False
 
 
 def test_save_markdown_reports_write_error():
-    with patch('scripts.output_rankings.open', side_effect=OSError('read-only')):
+    with patch('fantasy_ranks.output_rankings.open', side_effect=OSError('read-only')):
         output_rankings_mod.save_markdown()
 
 
 def test_output_main_handles_empty_and_invalid_leagues():
-    with patch('scripts.output_rankings.load_league_config', return_value=None):
+    with patch('fantasy_ranks.output_rankings.load_league_config', return_value=None):
         output_rankings_mod.main()
-    with patch('scripts.output_rankings.load_league_config', return_value={'leagues': []}):
+    with patch('fantasy_ranks.output_rankings.load_league_config', return_value={'leagues': []}):
         output_rankings_mod.main()
 
 
@@ -262,9 +263,9 @@ def test_output_main_processes_multiple_leagues_and_failures():
         ]
     }
     with (
-        patch('scripts.output_rankings.load_league_config', return_value=config),
-        patch('scripts.output_rankings.output_rankings', side_effect=[False, True]),
-        patch('scripts.output_rankings.save_markdown'),
+        patch('fantasy_ranks.output_rankings.load_league_config', return_value=config),
+        patch('fantasy_ranks.output_rankings.output_rankings', side_effect=[False, True]),
+        patch('fantasy_ranks.output_rankings.save_markdown'),
     ):
         output_rankings_mod.main()
 
@@ -293,15 +294,15 @@ def test_output_rankings_flow(tmp_path):
     }
 
     with (
-        patch('scripts.output_rankings.ROSTERS_DIR', tmp_path),
-        patch('scripts.output_rankings.load_rankings', return_value=rankings),
+        patch('fantasy_ranks.output_rankings.ROSTERS_DIR', tmp_path),
+        patch('fantasy_ranks.output_rankings.load_rankings', return_value=rankings),
     ):
         res = output_rankings('Team A', 'half', 'espn', 'espn_123', 'Test League')
         assert res is True
 
 
 def test_output_rankings_missing_data(tmp_path):
-    with patch('scripts.output_rankings.ROSTERS_DIR', tmp_path):
+    with patch('fantasy_ranks.output_rankings.ROSTERS_DIR', tmp_path):
         res = output_rankings('Team A', 'half', 'espn', 'espn_missing', 'Test League')
         assert res is False
 
@@ -310,8 +311,8 @@ def test_output_rankings_missing_rankings(tmp_path):
     owned_file = tmp_path / 'espn_123_owned_players.json'
     owned_file.write_text(json.dumps({'Team A': []}), encoding='utf-8')
     with (
-        patch('scripts.output_rankings.ROSTERS_DIR', tmp_path),
-        patch('scripts.output_rankings.load_rankings', return_value={}),
+        patch('fantasy_ranks.output_rankings.ROSTERS_DIR', tmp_path),
+        patch('fantasy_ranks.output_rankings.load_rankings', return_value={}),
     ):
         res = output_rankings('Team A', 'half', 'espn', 'espn_123', 'Test League')
         assert res is False
@@ -325,9 +326,9 @@ def test_main_flow(tmp_path):
         ]
     }
     with (
-        patch('scripts.output_rankings.load_league_config', return_value=config),
-        patch('scripts.output_rankings.output_rankings', return_value=True) as mock_out,
-        patch('scripts.output_rankings.save_markdown'),
+        patch('fantasy_ranks.output_rankings.load_league_config', return_value=config),
+        patch('fantasy_ranks.output_rankings.output_rankings', return_value=True) as mock_out,
+        patch('fantasy_ranks.output_rankings.save_markdown'),
     ):
         main()
         assert mock_out.call_count == 1
