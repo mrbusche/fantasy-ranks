@@ -48,6 +48,7 @@ def test_copy_newest_ros_file_copies_latest_download(tmp_path):
 
     with (
         patch('scripts.copy_newest_ros.Path.home', return_value=tmp_path),
+        patch('scripts.copy_newest_ros.REST_OF_SEASON_RANKINGS_PATTERN', 'ETR Rest of Season Top 150*.csv'),
         patch('scripts.copy_newest_ros.clean_csv_content') as clean,
     ):
         copy_newest_ros_file()
