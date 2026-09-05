@@ -39,8 +39,8 @@ def test_clean_csv_content_returns_false_when_copy_fails(tmp_path):
 def test_copy_newest_ros_file_copies_latest_download(tmp_path):
     downloads = tmp_path / 'Downloads'
     downloads.mkdir()
-    older = downloads / 'ETR Rest of Season Top 150 old.csv'
-    newest = downloads / 'ETR Rest of Season Top 150 new.csv'
+    older = downloads / 'Top 150 old.csv'
+    newest = downloads / 'Top 150 new.csv'
     older.write_text('old', encoding='utf-8')
     newest.write_text('\ufeffnew', encoding='utf-8')
     os.utime(older, (100, 100))
@@ -48,7 +48,7 @@ def test_copy_newest_ros_file_copies_latest_download(tmp_path):
 
     with (
         patch('fantasy_ranks.copy_newest_ros.Path.home', return_value=tmp_path),
-        patch('fantasy_ranks.copy_newest_ros.REST_OF_SEASON_RANKINGS_PATTERN', 'ETR Rest of Season Top 150*.csv'),
+        patch('fantasy_ranks.copy_newest_ros.REST_OF_SEASON_RANKINGS_PATTERN', 'Top 150*.csv'),
         patch('fantasy_ranks.copy_newest_ros.clean_csv_content') as clean,
     ):
         copy_newest_ros_file()
@@ -64,7 +64,7 @@ def test_copy_newest_ros_file_does_nothing_without_matches(tmp_path):
 def test_copy_newest_ros_file_reports_copy_failure(tmp_path):
     downloads = tmp_path / 'Downloads'
     downloads.mkdir()
-    source = downloads / 'ETR Rest of Season Top 150.csv'
+    source = downloads / 'Top 150.csv'
     source.write_text('data', encoding='utf-8')
 
     with (
