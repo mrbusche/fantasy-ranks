@@ -126,8 +126,9 @@ def main():
     for platform, leagues_data in platform_leagues.items():
         run_platform_leagues(platform, leagues_data)
 
-    output_rankings_script = base_dir / 'scripts/output_rankings.py'
-    run_script(str(output_rankings_script))
+    run_script(str(base_dir / 'scripts/output_rankings.py'))
+    run_script(str(base_dir / 'scripts/copy_newest_ros.py'))
+    run_script(str(base_dir / 'scripts/find_top_available.py'))
 
     print(f'\n{"=" * 50}')
     print('🎯 All scripts completed!')

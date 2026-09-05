@@ -136,11 +136,8 @@ def download_file(url, filename):
 
 
 def main():
-    # Create rankings directory if it doesn't exist
     rankings_dir = 'rankings'
-    if not os.path.exists(rankings_dir):
-        os.makedirs(rankings_dir)
-        print(f'Created directory: {rankings_dir}')
+    os.makedirs(rankings_dir, exist_ok=True)
 
     load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 

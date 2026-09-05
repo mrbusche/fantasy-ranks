@@ -6,50 +6,50 @@ import pytest
 
 import scripts.output_rankings as output_rankings_mod
 from scripts.output_rankings import (
-    _get_required_column,
-    _names_match,
-    _normalize_name,
-    _print_position_players,
     find_player_ranking,
     get_all_owned_players,
     get_available_players_by_position,
+    get_required_column,
     get_team_players,
     load_custom_owned_players,
     load_owned_players,
     load_rankings,
     main,
+    names_match,
+    normalize_name,
     organize_by_position,
     output_rankings,
     print_combined_position_rankings,
+    print_position_players,
     safe_print,
     save_markdown,
 )
 
 
-def test_get_required_column_success():
+def testget_required_column_success():
     row = {'Player Name': 'CeeDee Lamb', 'Rank': '1'}
-    assert _get_required_column(row, 'Player Name', 'PLAYER_NAME_COLUMN', 'test.csv') == 'CeeDee Lamb'
+    assert get_required_column(row, 'Player Name', 'PLAYER_NAME_COLUMN', 'test.csv') == 'CeeDee Lamb'
 
 
-def test_get_required_column_missing():
+def testget_required_column_missing():
     row = {'Name': 'CeeDee Lamb'}
     with pytest.raises(ValueError, match="Column 'Player Name' not found in test.csv"):
-        _get_required_column(row, 'Player Name', 'PLAYER_NAME_COLUMN', 'test.csv')
+        get_required_column(row, 'Player Name', 'PLAYER_NAME_COLUMN', 'test.csv')
 
 
-def test_normalize_name():
-    assert _normalize_name('') == ''
-    assert _normalize_name('Marvin Harrison Jr.') == 'marvin harrison'
-    assert _normalize_name('Kenneth Walker III') == 'kenneth walker'
-    assert _normalize_name('Tetairoa McMillan') == 'tet mcmillan'
-    assert _normalize_name('Kenny Gainwell') == 'kenneth gainwell'
-    assert _normalize_name("De'Von Achane") == 'devon achane'
+def testnormalize_name():
+    assert normalize_name('') == ''
+    assert normalize_name('Marvin Harrison Jr.') == 'marvin harrison'
+    assert normalize_name('Kenneth Walker III') == 'kenneth walker'
+    assert normalize_name('Tetairoa McMillan') == 'tet mcmillan'
+    assert normalize_name('Kenny Gainwell') == 'kenneth gainwell'
+    assert normalize_name("De'Von Achane") == 'devon achane'
 
 
-def test_names_match():
-    assert _names_match('Marvin Harrison Jr.', 'Marvin Harrison') is True
-    assert _names_match('Kenneth Gainwell', 'Kenny Gainwell') is True
-    assert _names_match('Patrick Mahomes', 'Josh Allen') is False
+def testnames_match():
+    assert names_match('Marvin Harrison Jr.', 'Marvin Harrison') is True
+    assert names_match('Kenneth Gainwell', 'Kenny Gainwell') is True
+    assert names_match('Patrick Mahomes', 'Josh Allen') is False
 
 
 def test_load_owned_players_success(tmp_path):
@@ -191,12 +191,12 @@ def test_find_player_ranking():
     assert find_player_ranking('Marvin Harrison Jr.', 'WR', rankings)['rank'] == 10
 
 
-def test_print_position_players(capsys):
+def testprint_position_players(capsys):
     players = [
         {'name': 'Player B', 'proTeam': 'KC', 'totalPoints': 50.0, 'injured': False},
         {'name': 'Player A', 'proTeam': 'BUF', 'totalPoints': 100.0, 'injured': True},
     ]
-    _print_position_players('QB', players)
+    print_position_players('QB', players)
     captured = capsys.readouterr()
     assert 'QB:' in captured.out
     assert 'Player A' in captured.out
