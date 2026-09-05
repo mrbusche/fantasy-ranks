@@ -114,6 +114,19 @@ def test_download_file_no_valid_data(tmp_path):
     assert not os.path.exists(output_file)
 
 
+def test_download_file_fills_missing_columns(tmp_path):
+    output_file = str(tmp_path / 'missing-column.csv')
+
+    def mock_urlretrieve(url, filename):
+        with open(filename, 'w', encoding='utf-8') as f:
+            f.write('Rank,Player Name\n1,Josh Allen\n')
+
+    with patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve):
+        download_file('http://example.com/data.csv', output_file)
+
+    assert open(output_file, encoding='utf-8').read().splitlines()[1] == '1,Josh Allen,,'
+
+
 def test_download_file_network_error(tmp_path):
     output_file = str(tmp_path / 'failed.csv')
     with patch('urllib.request.urlretrieve', side_effect=OSError('Network unreachable')):

@@ -87,3 +87,8 @@ def test_fetch_and_export_data_connection_failure():
     with patch('scripts.espn_rosters.League', side_effect=RuntimeError('Auth failed')):
         # Should catch error and not raise
         fetch_and_export_data(12345, 'half')
+
+
+def test_fetch_and_export_data_handles_league_value_error():
+    with patch('scripts.espn_rosters.League', side_effect=ValueError('invalid league')):
+        fetch_and_export_data(12345, 'half')

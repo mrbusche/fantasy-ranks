@@ -58,3 +58,16 @@ def test_copy_newest_ros_file_copies_latest_download(tmp_path):
 def test_copy_newest_ros_file_does_nothing_without_matches(tmp_path):
     with patch('scripts.copy_newest_ros.Path.home', return_value=tmp_path):
         copy_newest_ros_file()
+
+
+def test_copy_newest_ros_file_reports_copy_failure(tmp_path):
+    downloads = tmp_path / 'Downloads'
+    downloads.mkdir()
+    source = downloads / 'ETR Rest of Season Top 150.csv'
+    source.write_text('data', encoding='utf-8')
+
+    with (
+        patch('scripts.copy_newest_ros.Path.home', return_value=tmp_path),
+        patch('scripts.copy_newest_ros.clean_csv_content', return_value=False),
+    ):
+        copy_newest_ros_file()
