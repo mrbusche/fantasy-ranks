@@ -5,24 +5,10 @@ import urllib.error
 import urllib.request
 from datetime import UTC, datetime, timedelta
 
+from dotenv import load_dotenv
+
 if hasattr(sys.stdout, 'reconfigure'):
     sys.stdout.reconfigure(encoding='utf-8')
-
-
-def load_env_file(filepath='.env'):
-    """Load KEY=VALUE pairs from a .env file into os.environ (without overwriting existing vars)."""
-    if not os.path.exists(filepath):
-        return
-
-    with open(filepath, encoding='utf-8') as env_file:
-        for line in env_file:
-            line = line.strip()
-            if not line or line.startswith('#') or '=' not in line:
-                continue
-            key, _, value = line.partition('=')
-            key = key.strip()
-            value = value.strip().strip('"').strip("'")
-            os.environ.setdefault(key, value)
 
 
 def get_current_nfl_week():
@@ -163,7 +149,7 @@ def main():
         os.makedirs(rankings_dir)
         print(f'Created directory: {rankings_dir}')
 
-    load_env_file()
+    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
 
     # Get current NFL week
     current_week = get_current_nfl_week()
