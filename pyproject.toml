@@ -12,7 +12,10 @@ dependencies = [
 ]
 
 [dependency-groups]
-dev = ["ruff>=0.16.6"]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.6",
+]
 
 
 [project.scripts]
@@ -22,15 +25,7 @@ fantasy-ranks = "fantasy_ranks:main"
 requires = ["uv_build>=0.12.9,<0.13.0"]
 build-backend = "uv_build"
 
-[tool.ruff]
-line-length = 120
-indent-width = 4
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".", "scripts"]
 
-[tool.ruff.format]
-quote-style = "single"
-indent-style = "space"
-skip-magic-trailing-comma = false
-line-ending = "auto"
-
-#[tool.ruff.lint]
-#select = ["ALL"]

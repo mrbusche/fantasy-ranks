@@ -1,5 +1,6 @@
 .env
 .idea
+.pytest_cache
 .ruff_cache
 .venv
 
@@ -11,4 +12,4 @@ lineups/start-sit.md
 rosters/*_owned_players.json
 rosters/sleeper_master_players.json
 
-scripts/__pycache__/*
+**/__pycache__/*
