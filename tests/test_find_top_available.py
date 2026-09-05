@@ -1,7 +1,7 @@
 import json
 from unittest.mock import patch
 
-from scripts.find_top_available import (
+from fantasy_ranks.find_top_available import (
     find_available_for_league,
     find_team_players_with_rankings,
     find_top_available_players,
@@ -70,8 +70,8 @@ def test_get_owned_players_by_league_with_teams(tmp_path):
     roster_file = rosters_dir / 'espn_123_owned_players.json'
     roster_file.write_text(json.dumps({'Team A': [{'name': 'Josh Allen'}]}), encoding='utf-8')
 
-    module_file = tmp_path / 'scripts' / 'find_top_available.py'
-    module_file.parent.mkdir()
+    module_file = tmp_path / 'src' / 'fantasy_ranks' / 'find_top_available.py'
+    module_file.parent.mkdir(parents=True)
     module_file.write_text('', encoding='utf-8')
     config = {
         'leagues': [
@@ -85,7 +85,7 @@ def test_get_owned_players_by_league_with_teams(tmp_path):
         ]
     }
 
-    with patch('scripts.find_top_available.__file__', str(module_file)):
+    with patch('fantasy_ranks.find_top_available.__file__', str(module_file)):
         leagues, full_data = get_owned_players_by_league_with_teams(config)
 
     assert leagues == {'League A': {'Josh Allen'}}
@@ -93,8 +93,8 @@ def test_get_owned_players_by_league_with_teams(tmp_path):
 
 
 def test_get_owned_players_by_league_with_teams_handles_invalid_and_missing_data(tmp_path):
-    module_file = tmp_path / 'scripts' / 'find_top_available.py'
-    module_file.parent.mkdir()
+    module_file = tmp_path / 'src' / 'fantasy_ranks' / 'find_top_available.py'
+    module_file.parent.mkdir(parents=True)
     module_file.write_text('', encoding='utf-8')
     config = {
         'leagues': [
@@ -107,7 +107,7 @@ def test_get_owned_players_by_league_with_teams_handles_invalid_and_missing_data
     rosters_dir.mkdir()
     (rosters_dir / 'espn_3_owned_players.json').write_text('{}', encoding='utf-8')
 
-    with patch('scripts.find_top_available.__file__', str(module_file)):
+    with patch('fantasy_ranks.find_top_available.__file__', str(module_file)):
         leagues, full_data = get_owned_players_by_league_with_teams(config)
 
     assert leagues == {}
@@ -116,8 +116,8 @@ def test_get_owned_players_by_league_with_teams_handles_invalid_and_missing_data
 
 
 def test_find_top_available_players_writes_analysis(tmp_path):
-    module_file = tmp_path / 'scripts' / 'find_top_available.py'
-    module_file.parent.mkdir()
+    module_file = tmp_path / 'src' / 'fantasy_ranks' / 'find_top_available.py'
+    module_file.parent.mkdir(parents=True)
     module_file.write_text('', encoding='utf-8')
     output_dir = tmp_path / 'lineups'
     output_dir.mkdir()
@@ -129,9 +129,12 @@ def test_find_top_available_players_writes_analysis(tmp_path):
     config = {'leagues': [{'league_name': 'League A', 'team_name': 'Team A'}]}
 
     with (
-        patch('scripts.find_top_available.__file__', str(module_file)),
-        patch('scripts.find_top_available.load_ros_rankings', return_value=rankings),
-        patch('scripts.find_top_available.get_owned_players_by_league_with_teams', return_value=({'League A': {'Owned Player'}}, {'League A': league_data})),
+        patch('fantasy_ranks.find_top_available.__file__', str(module_file)),
+        patch('fantasy_ranks.find_top_available.load_ros_rankings', return_value=rankings),
+        patch(
+            'fantasy_ranks.find_top_available.get_owned_players_by_league_with_teams',
+            return_value=({'League A': {'Owned Player'}}, {'League A': league_data}),
+        ),
     ):
         find_top_available_players(config)
 
@@ -142,35 +145,44 @@ def test_find_top_available_players_writes_analysis(tmp_path):
 
 
 def test_find_top_available_players_handles_missing_rankings_and_leagues(tmp_path):
-    module_file = tmp_path / 'scripts' / 'find_top_available.py'
-    module_file.parent.mkdir()
+    module_file = tmp_path / 'src' / 'fantasy_ranks' / 'find_top_available.py'
+    module_file.parent.mkdir(parents=True)
     module_file.write_text('', encoding='utf-8')
     with (
-        patch('scripts.find_top_available.__file__', str(module_file)),
-        patch('scripts.find_top_available.load_ros_rankings', return_value=[]),
+        patch('fantasy_ranks.find_top_available.__file__', str(module_file)),
+        patch('fantasy_ranks.find_top_available.load_ros_rankings', return_value=[]),
     ):
         assert find_top_available_players({'leagues': []}) is None
 
     with (
-        patch('scripts.find_top_available.__file__', str(module_file)),
-        patch('scripts.find_top_available.load_ros_rankings', return_value=[{'name': 'Player', 'position': 'QB', 'team': 'TST', 'rank': 1}]),
-        patch('scripts.find_top_available.get_owned_players_by_league_with_teams', return_value=({}, {})),
+        patch('fantasy_ranks.find_top_available.__file__', str(module_file)),
+        patch(
+            'fantasy_ranks.find_top_available.load_ros_rankings',
+            return_value=[{'name': 'Player', 'position': 'QB', 'team': 'TST', 'rank': 1}],
+        ),
+        patch('fantasy_ranks.find_top_available.get_owned_players_by_league_with_teams', return_value=({}, {})),
     ):
         assert find_top_available_players({'leagues': []}) is None
 
 
 def test_find_top_available_players_skips_leagues_without_roster_data(tmp_path):
-    module_file = tmp_path / 'scripts' / 'find_top_available.py'
-    module_file.parent.mkdir()
+    module_file = tmp_path / 'src' / 'fantasy_ranks' / 'find_top_available.py'
+    module_file.parent.mkdir(parents=True)
     module_file.write_text('', encoding='utf-8')
     output_dir = tmp_path / 'lineups'
     output_dir.mkdir()
     config = {'leagues': [{'league_name': 'Missing', 'team_name': 'Team'}]}
 
     with (
-        patch('scripts.find_top_available.__file__', str(module_file)),
-        patch('scripts.find_top_available.load_ros_rankings', return_value=[{'name': 'Player', 'position': 'QB', 'team': 'TST', 'rank': 1}]),
-        patch('scripts.find_top_available.get_owned_players_by_league_with_teams', return_value=({'Other': set()}, {'Other': {}})),
+        patch('fantasy_ranks.find_top_available.__file__', str(module_file)),
+        patch(
+            'fantasy_ranks.find_top_available.load_ros_rankings',
+            return_value=[{'name': 'Player', 'position': 'QB', 'team': 'TST', 'rank': 1}],
+        ),
+        patch(
+            'fantasy_ranks.find_top_available.get_owned_players_by_league_with_teams',
+            return_value=({'Other': set()}, {'Other': {}}),
+        ),
     ):
         find_top_available_players(config)
 
@@ -178,15 +190,21 @@ def test_find_top_available_players_skips_leagues_without_roster_data(tmp_path):
 
 
 def test_find_top_available_players_reports_output_error(tmp_path):
-    module_file = tmp_path / 'scripts' / 'find_top_available.py'
-    module_file.parent.mkdir()
+    module_file = tmp_path / 'src' / 'fantasy_ranks' / 'find_top_available.py'
+    module_file.parent.mkdir(parents=True)
     module_file.write_text('', encoding='utf-8')
     config = {'leagues': [{'league_name': 'League A', 'team_name': 'Team A'}]}
     data = {'League A': {'Player'}}
     with (
-        patch('scripts.find_top_available.__file__', str(module_file)),
-        patch('scripts.find_top_available.load_ros_rankings', return_value=[{'name': 'Player', 'position': 'QB', 'team': 'TST', 'rank': 1}]),
-        patch('scripts.find_top_available.get_owned_players_by_league_with_teams', return_value=(data, {'League A': {'Team A': []}})),
+        patch('fantasy_ranks.find_top_available.__file__', str(module_file)),
+        patch(
+            'fantasy_ranks.find_top_available.load_ros_rankings',
+            return_value=[{'name': 'Player', 'position': 'QB', 'team': 'TST', 'rank': 1}],
+        ),
+        patch(
+            'fantasy_ranks.find_top_available.get_owned_players_by_league_with_teams',
+            return_value=(data, {'League A': {'Team A': []}}),
+        ),
         patch('builtins.open', side_effect=OSError('read-only')),
     ):
         find_top_available_players(config)

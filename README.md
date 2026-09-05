@@ -56,7 +56,7 @@ ESPN_S2=your-espn-s2-value
 ## Generating lineups
 
 ```shell
-uv run python main.py
+uv run fantasy-ranks
 ```
 
 This downloads the latest weekly rankings, pulls your rosters from ESPN/Sleeper, and writes the resulting analysis to `lineups/start-sit.md`.
@@ -66,7 +66,7 @@ This downloads the latest weekly rankings, pulls your rosters from ESPN/Sleeper,
 To clear out generated data (`rankings/`, `rosters/`, and `lineups/` directories) and start fresh:
 
 ```shell
-uv run python scripts/reset_project.py
+uv run python -m fantasy_ranks.reset_project
 ```
 
 ## Running tests
@@ -74,3 +74,8 @@ uv run python scripts/reset_project.py
 ```shell
 uv run pytest
 ```
+
+## Project structure
+
+- `src/fantasy_ranks/` — the installable package: `cli.py` orchestrates the pipeline, and each module (`espn_rosters.py`, `sleeper_rosters.py`, `download_weekly_rankings.py`, `output_rankings.py`, `copy_newest_ros.py`, `find_top_available.py`, `reset_project.py`, `shared_functions.py`) can also be run standalone via `uv run python -m fantasy_ranks.<module>`.
+- `tests/` — mirrors the package modules, with shared fixtures for mocking ESPN/Sleeper API calls in `tests/conftest.py`.

@@ -1,10 +1,9 @@
 import json
 import os
 from datetime import UTC, datetime
-from types import SimpleNamespace
 from unittest.mock import patch
 
-from scripts.espn_rosters import (
+from fantasy_ranks.espn_rosters import (
     check_if_update_needed_for_league,
     fetch_and_export_data,
     file_needs_update,
@@ -31,7 +30,7 @@ def test_file_needs_update_old(tmp_path):
 
 
 def test_check_if_update_needed_for_league_needed():
-    with patch('scripts.espn_rosters.file_needs_update', return_value=True):
+    with patch('fantasy_ranks.espn_rosters.file_needs_update', return_value=True):
         assert check_if_update_needed_for_league(12345) is True
 
 
@@ -39,36 +38,40 @@ def test_check_if_update_needed_for_league_not_needed(tmp_path):
     fake_file = tmp_path / 'espn_12345_owned_players.json'
     fake_file.write_text('{}', encoding='utf-8')
     with (
-        patch('scripts.espn_rosters.ROSTERS_DIR', str(tmp_path)),
-        patch('scripts.espn_rosters.file_needs_update', return_value=False),
+        patch('fantasy_ranks.espn_rosters.ROSTERS_DIR', str(tmp_path)),
+        patch('fantasy_ranks.espn_rosters.file_needs_update', return_value=False),
     ):
         assert check_if_update_needed_for_league(12345) is False
 
 
-def test_fetch_and_export_data_success(tmp_path):
-    player1 = SimpleNamespace(
-        name='Patrick Mahomes',
-        position='QB',
-        proTeam='KC',
-        injured=False,
-        total_points=250.5,
+def test_fetch_and_export_data_success(tmp_path, mock_espn_league):
+    mock_league = mock_espn_league(
+        [
+            {
+                'team_name': 'Chiefs Kingdom',
+                'players': [
+                    {
+                        'name': 'Patrick Mahomes',
+                        'position': 'QB',
+                        'proTeam': 'KC',
+                        'injured': False,
+                        'total_points': 250.5,
+                    },
+                    {
+                        'name': 'Travis Kelce',
+                        'position': 'TE',
+                        'proTeam': 'KC',
+                        'injured': True,
+                        'total_points': 180.2,
+                    },
+                ],
+            }
+        ]
     )
-    player2 = SimpleNamespace(
-        name='Travis Kelce',
-        position='TE',
-        proTeam='KC',
-        injured=True,
-        total_points=180.2,
-    )
-    team1 = SimpleNamespace(
-        team_name='Chiefs Kingdom',
-        roster=[player1, player2],
-    )
-    mock_league = SimpleNamespace(teams=[team1])
 
     with (
-        patch('scripts.espn_rosters.League', return_value=mock_league),
-        patch('scripts.espn_rosters.ROSTERS_DIR', str(tmp_path)),
+        patch('fantasy_ranks.espn_rosters.League', return_value=mock_league),
+        patch('fantasy_ranks.espn_rosters.ROSTERS_DIR', str(tmp_path)),
     ):
         fetch_and_export_data(12345, 'half')
 
@@ -84,11 +87,11 @@ def test_fetch_and_export_data_success(tmp_path):
 
 
 def test_fetch_and_export_data_connection_failure():
-    with patch('scripts.espn_rosters.League', side_effect=RuntimeError('Auth failed')):
+    with patch('fantasy_ranks.espn_rosters.League', side_effect=RuntimeError('Auth failed')):
         # Should catch error and not raise
         fetch_and_export_data(12345, 'half')
 
 
 def test_fetch_and_export_data_handles_league_value_error():
-    with patch('scripts.espn_rosters.League', side_effect=ValueError('invalid league')):
+    with patch('fantasy_ranks.espn_rosters.League', side_effect=ValueError('invalid league')):
         fetch_and_export_data(12345, 'half')

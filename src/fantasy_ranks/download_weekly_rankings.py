@@ -5,6 +5,7 @@ import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -142,7 +143,8 @@ def main():
     rankings_dir = 'rankings'
     os.makedirs(rankings_dir, exist_ok=True)
 
-    load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+    project_root = Path(__file__).resolve().parents[2]
+    load_dotenv(project_root / '.env')
 
     # Get current NFL week
     current_week = get_current_nfl_week()

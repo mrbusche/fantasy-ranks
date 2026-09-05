@@ -7,7 +7,7 @@ Also shows the 10 lowest ranked players from a team.
 import csv
 from pathlib import Path
 
-from shared_functions import (
+from fantasy_ranks.shared_functions import (
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -126,7 +126,7 @@ def find_team_players_with_rankings(team_name, league_data, ros_rankings):
 
 def get_owned_players_by_league_with_teams(config):
     """Get owned players for each league separately, including team rosters."""
-    base_dir = Path(__file__).parent.parent
+    base_dir = Path(__file__).resolve().parent.parent.parent
     leagues_data = {}
     leagues_full_data = {}
 
@@ -164,7 +164,7 @@ def get_owned_players_by_league_with_teams(config):
 
 def find_top_available_players(config):
     """Main function to find top 10 available players from ROS rankings for each league."""
-    base_dir = Path(__file__).parent.parent
+    base_dir = Path(__file__).resolve().parent.parent.parent
     ros_file = base_dir / 'rankings' / 'rest-of-season.csv'
 
     print('🏈 Finding Top 10 Available Players by League from Rest of Season Rankings')

@@ -33,7 +33,7 @@ def validate_league(league):
 def load_league_config(config_file=None):
     """Load league configuration from JSON file, validating each league entry."""
     if config_file is None:
-        config_file = Path(__file__).parent.parent / 'config.json'
+        config_file = Path(__file__).parent.parent.parent / 'config.json'
 
     try:
         with open(config_file, 'r', encoding='utf-8') as file:

@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
-from scripts.shared_functions import (
+from fantasy_ranks.shared_functions import (
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -92,8 +92,8 @@ def test_load_league_config_default_path(tmp_path):
     fake_config = tmp_path / 'config.json'
     fake_config.write_text('{"leagues": []}', encoding='utf-8')
 
-    with patch('scripts.shared_functions.Path') as mock_path:
-        mock_path.return_value.parent.parent.__truediv__.return_value = fake_config
+    with patch('fantasy_ranks.shared_functions.Path') as mock_path:
+        mock_path.return_value.parent.parent.parent.__truediv__.return_value = fake_config
         result = load_league_config()
         assert result == {'leagues': []}
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env'))
+load_dotenv(Path(__file__).resolve().parents[2] / '.env')
 REST_OF_SEASON_RANKINGS_PATTERN = os.environ.get('REST_OF_SEASON_RANKINGS_PATTERN', 'Ranks*.csv')
 
 

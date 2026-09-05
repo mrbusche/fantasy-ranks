@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import time
+from pathlib import Path
 
 import requests
 
@@ -11,7 +12,8 @@ DATA_CACHE_DURATION = 3600  # 1 hour for rosters/free agents
 MASTER_DB_CACHE_DURATION = 86400  # 24 hours for the huge player DB
 FREE_AGENT_LIMIT = 200
 
-ROSTERS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'rosters')
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+ROSTERS_DIR = os.path.join(PROJECT_ROOT, 'rosters')
 MASTER_PLAYERS_FILE = os.path.join(ROSTERS_DIR, 'sleeper_master_players.json')
 
 
