@@ -77,6 +77,22 @@ uv run python src\fantasy_ranks\parse_yahoo_draft.py {leagueId}
 
 The generated `rosters/yahoo_{leagueId}_owned_players.json` file is treated as the source of truth. The main `fantasy-ranks` command does not run the Yahoo! parser automatically.
 
+### Updating Yahoo! rosters after waivers
+
+After waivers or other roster changes, open the Yahoo! transactions page, copy the entire page (press `Ctrl + A`, then `Ctrl + C`), and save the copied text to:
+
+```text
+rosters/yahoo_updates_{leagueId}.txt
+```
+
+Then update the local roster file by running:
+
+```shell
+uv run python src\fantasy_ranks\update_yahoo_rosters.py {leagueId}
+```
+
+You can copy and process the same transactions page more than once. Reprocessing transactions is safe: players are not added if they are already on the roster, and dropping a player who has already been removed has no additional effect.
+
 ## Resetting the project
 
 To clear out generated data (`rankings/`, `rosters/`, and `lineups/` directories) and start fresh:
