@@ -443,7 +443,7 @@ def print_combined_position_rankings(players_by_position, all_owned_players, ran
 
 
 def output_rankings(
-    team_name, scoring_type='half', league_type='espn', file_prefix=None, league_name=None, custom_owned_path=None
+    team_name, scoring_type='half', league_type='espn', file_prefix: str | None = None, league_name=None, custom_owned_path=None
 ):
     """
     Main function to analyze a team's roster against weekly rankings.
@@ -478,7 +478,7 @@ def output_rankings(
         # Load the data
         owned_players_data = load_owned_players(json_file)
         if not owned_players_data:
-            if league_type == 'yahoo' and not json_file.exists():
+            if league_type == 'yahoo' and not json_file.exists() and file_prefix:
                 league_id = file_prefix.replace('yahoo_', '')
                 print(
                     f'💡 Reminder: Yahoo! rosters are imported manually. Save the draft results to '
