@@ -26,7 +26,7 @@ def test_run_module_subprocess_error():
         run_module('fantasy_ranks.download_weekly_rankings')
 
 
-def test_run_platform_leagues_unknown_platform():
+def test_run_platform_leagues_yahoo():
     with patch('fantasy_ranks.cli.run_module') as mock_run_module:
         run_platform_leagues('yahoo', [('123', 'half', 'My League')])
         assert not mock_run_module.called

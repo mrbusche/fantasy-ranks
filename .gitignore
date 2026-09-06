@@ -12,6 +12,7 @@ lineups/start-sit.md
 
 rosters/*_owned_players.json
 rosters/sleeper_master_players.json
+rosters/yahoo_*.txt
 
 **/__pycache__/*
 .coverage

@@ -30,7 +30,7 @@ Create a file named `config.json` in the root. It must be valid JSON containing 
 {
   "leagues": [
     {
-      "platform": "", # required: "espn" or "sleeper"
+      "platform": "", # required: "espn", "sleeper", or "yahoo"
       "league_id": "", # required: numeric, get this from the website URL
       "scoring_type": "", # required: "half" or "full"
       "team_name": "", # required: your exact team name in the league
@@ -59,7 +59,39 @@ ESPN_S2=your-espn-s2-value
 uv run fantasy-ranks
 ```
 
-This downloads the latest weekly rankings, pulls your rosters from ESPN/Sleeper, and writes the resulting analysis to `lineups/start-sit.md`.
+This downloads the latest weekly rankings, pulls your rosters from ESPN and Sleeper, uses the manually maintained Yahoo! roster files, and writes the resulting analysis to `lineups/start-sit.md`.
+
+## Importing Yahoo! rosters
+
+Yahoo! leagues are kept up to date manually. To import or refresh a Yahoo! draft roster, open the draft results page, copy the entire page (press `Ctrl + A`, then `Ctrl + C`), and save the copied text to:
+
+```text
+rosters/yahoo_{leagueId}.txt
+```
+
+Then run the parser with your league ID:
+
+```shell
+uv run python src\fantasy_ranks\parse_yahoo_draft.py {leagueId}
+```
+
+The generated `rosters/yahoo_{leagueId}_owned_players.json` file is treated as the source of truth. The main `fantasy-ranks` command does not run the Yahoo! parser automatically.
+
+### Updating Yahoo! rosters after waivers
+
+After waivers or other roster changes, open the Yahoo! transactions page, copy the entire page (press `Ctrl + A`, then `Ctrl + C`), and save the copied text to:
+
+```text
+rosters/yahoo_updates_{leagueId}.txt
+```
+
+Then update the local roster file by running:
+
+```shell
+uv run python src\fantasy_ranks\update_yahoo_rosters.py {leagueId}
+```
+
+You can copy and process the same transactions page more than once. Reprocessing transactions is safe: players are not added if they are already on the roster, and dropping a player who has already been removed has no additional effect.
 
 ## Resetting the project
 
