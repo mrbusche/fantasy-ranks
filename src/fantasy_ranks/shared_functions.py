@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-VALID_PLATFORMS = ('espn', 'sleeper')
+VALID_PLATFORMS = ('espn', 'sleeper', 'yahoo')
 VALID_SCORING_TYPES = ('half', 'full')
 
 

@@ -103,6 +103,7 @@ def test_load_league_config_default_path(tmp_path):
     [
         {'platform': 'espn', 'league_id': '12345', 'scoring_type': 'half', 'team_name': 'My Team'},
         {'platform': 'sleeper', 'league_id': 12345, 'scoring_type': 'full', 'team_name': 'My Team'},
+        {'platform': 'yahoo', 'league_id': '67890', 'scoring_type': 'half', 'team_name': 'My Team'},
     ],
 )
 def test_validate_league_valid(league):
@@ -110,7 +111,7 @@ def test_validate_league_valid(league):
 
 
 def test_validate_league_invalid_platform():
-    league = {'platform': 'yahoo', 'league_id': '12345', 'scoring_type': 'half', 'team_name': 'My Team'}
+    league = {'platform': 'nfl', 'league_id': '12345', 'scoring_type': 'half', 'team_name': 'My Team'}
     errors = validate_league(league)
     assert len(errors) == 1
     assert 'platform' in errors[0]
@@ -147,7 +148,7 @@ def test_validate_league_blank_team_name():
 
 
 def test_validate_league_multiple_errors():
-    league = {'platform': 'yahoo', 'league_id': 'abc', 'scoring_type': 'ppr', 'team_name': ''}
+    league = {'platform': 'nfl', 'league_id': 'abc', 'scoring_type': 'ppr', 'team_name': ''}
     errors = validate_league(league)
     assert len(errors) == 4
 
@@ -156,7 +157,7 @@ def test_load_league_config_skips_invalid_leagues(tmp_path):
     config_data = {
         'leagues': [
             {'platform': 'espn', 'league_id': '12345', 'scoring_type': 'half', 'team_name': 'Valid Team'},
-            {'platform': 'yahoo', 'league_id': '999', 'scoring_type': 'full', 'team_name': 'Invalid Platform'},
+            {'platform': 'yahoo', 'league_id': '999', 'scoring_type': 'full', 'team_name': 'Yahoo Team'},
             {'platform': 'sleeper', 'league_id': 'abc', 'scoring_type': 'full', 'team_name': 'Bad League Id'},
             {'platform': 'espn', 'league_id': '111', 'scoring_type': 'ppr', 'team_name': 'Bad Scoring Type'},
             {'platform': 'espn', 'league_id': '222', 'scoring_type': 'half'},
@@ -166,5 +167,5 @@ def test_load_league_config_skips_invalid_leagues(tmp_path):
     config_file.write_text(json.dumps(config_data), encoding='utf-8')
 
     result = load_league_config(config_file)
-    assert len(result['leagues']) == 1
-    assert result['leagues'][0]['team_name'] == 'Valid Team'
+    assert len(result['leagues']) == 2
+    assert [league['team_name'] for league in result['leagues']] == ['Valid Team', 'Yahoo Team']

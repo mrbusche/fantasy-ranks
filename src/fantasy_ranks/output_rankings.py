@@ -478,6 +478,13 @@ def output_rankings(
         # Load the data
         owned_players_data = load_owned_players(json_file)
         if not owned_players_data:
+            if league_type == 'yahoo' and not json_file.exists():
+                league_id = file_prefix.replace('yahoo_', '')
+                print(
+                    f'💡 Reminder: Yahoo! rosters are imported manually. Save the draft results to '
+                    f'rosters\\{file_prefix}.txt, then run: '
+                    f'uv run python src\\fantasy_ranks\\parse_yahoo_draft.py {league_id}'
+                )
             return False
 
         # Get the team's players

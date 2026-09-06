@@ -45,6 +45,10 @@ def run_module(module_name, additional_args=None):
 
 def run_platform_leagues(platform, leagues):
     """Run the platform-specific roster fetch module for multiple leagues."""
+    if platform == 'yahoo':
+        print('ℹ️  Skipping Yahoo! roster updates; using manually maintained roster files.')
+        return
+
     module_name = PLATFORM_MODULES.get(platform)
 
     if module_name is None:
