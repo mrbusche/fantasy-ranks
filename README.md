@@ -53,6 +53,29 @@ ESPN_S2=your-espn-s2-value
 - `RANKINGS_URL`: if you found this website you can figure out how your favorite rankings site exposes their rankings, you will want this exported as csv.
 - `ESPN_SWID` / `ESPN_S2`: only needed if any configured league is a private ESPN league. Log in to ESPN in your browser, open dev tools, and copy the `espn_s2` and `SWID` cookie values (`SWID` includes the surrounding curly braces).
 
+## Adding your own rankings
+
+You can use rankings from any source as long as you save them as CSV files in the `rankings/` directory. The weekly lineup report looks for these exact file names:
+
+| File            | Players                             |
+| --------------- | ----------------------------------- |
+| `qb.csv`        | Quarterbacks                        |
+| `half_flex.csv` | RB, WR, and TE for half-PPR leagues |
+| `ppr_flex.csv`  | RB, WR, and TE for full-PPR leagues |
+| `kicker.csv`    | Kickers                             |
+| `dst.csv`       | Team defenses                       |
+
+Each weekly file must have this exact header row and these columns: `Rank,Player Name,Team,Position`. For example:
+
+```csv
+Rank,Player Name,Team,Position
+1,Josh Allen,BUF,QB
+```
+
+The full-PPR league setting uses `ppr_flex.csv`; the half-PPR setting uses `half_flex.csv`. The position values in the flex file should be `RB`, `WR`, or `TE`, and the defense file should use `DST` for its position.
+
+The rest-of-season report uses a separate file named `rest-of-season.csv`. It must have the header `Player,Position,Team,Rank`. The normal pipeline copies the newest matching rankings export from your Downloads folder to this file. To keep a manually created file, place it in `rankings/rest-of-season.csv` and run the relevant report modules individually instead of the full `uv run fantasy-ranks` command.
+
 ## Generating lineups
 
 ```shell
