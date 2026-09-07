@@ -45,7 +45,7 @@ def load_ros_rankings(csv_file):
     return rankings
 
 
-def is_player_owned(ros_player, all_owned_players):
+def is_player_owned(ros_player, all_owned_players, normalized_owned_players=None):
     """Check if a ROS player is owned by anyone across all teams."""
     player_name = ros_player['name']
     position = ros_player['position']
@@ -57,14 +57,19 @@ def is_player_owned(ros_player, all_owned_players):
     # Normalize the ROS player name
     normalized_ros_name = normalize_name(player_name)
 
-    # Check against all owned players
-    for owned_name in all_owned_players:
-        normalized_owned_name = normalize_name(owned_name)
+    if normalized_owned_players is None:
+        normalized_owned_players = {normalize_name(name) for name in all_owned_players}
 
+    if normalized_ros_name in normalized_owned_players:
+        return True
+
+    # Check against pre-normalized names to avoid repeating work.
+    for normalized_owned_name in normalized_owned_players:
         # Check various matching scenarios
         if (
             normalized_ros_name == normalized_owned_name
-            or names_match(player_name, owned_name)
+            or normalized_ros_name in normalized_owned_name
+            or normalized_owned_name in normalized_ros_name
             or (position == 'D/ST' and normalized_ros_name in normalized_owned_name)
             or (position == 'D/ST' and normalized_owned_name in normalized_ros_name)
         ):
@@ -76,9 +81,10 @@ def is_player_owned(ros_player, all_owned_players):
 def find_available_for_league(ros_rankings, owned_players):
     """Find available players for a specific league."""
     available_players = []
+    normalized_owned_players = {normalize_name(name) for name in owned_players}
 
     for player in ros_rankings:
-        if not is_player_owned(player, owned_players):
+        if not is_player_owned(player, owned_players, normalized_owned_players):
             available_players.append(player)
 
     # Sort by rank and take top 10

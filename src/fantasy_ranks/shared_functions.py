@@ -5,6 +5,22 @@ from pathlib import Path
 
 VALID_PLATFORMS = ('espn', 'sleeper', 'yahoo')
 VALID_SCORING_TYPES = ('half', 'full')
+NAME_REPLACEMENTS = {
+    ' jr.': '',
+    ' jr': '',
+    ' sr.': '',
+    ' sr': '',
+    ' iii': '',
+    ' ii': '',
+    ' iv': '',
+    ' v': '',
+    "'": '',
+    '-': '',
+    '.': '',
+    'tetairoa mcmillan': 'tet mcmillan',
+    'zonovan knight': 'bam knight',
+    'kenny gainwell': 'kenneth gainwell',
+}
 
 
 def validate_league(league):
@@ -94,27 +110,8 @@ def normalize_name(name):
     normalized = name.lower().strip()
 
     # Common name replacements for regular players
-    replacements = {
-        # Suffix variations
-        ' jr.': '',
-        ' jr': '',
-        ' sr.': '',
-        ' sr': '',
-        ' iii': '',
-        ' ii': '',
-        ' iv': '',
-        ' v': '',
-        "'": '',
-        '-': '',
-        '.': '',
-        # Specific player name variations
-        'tetairoa mcmillan': 'tet mcmillan',
-        'zonovan knight': 'bam knight',
-        'kenny gainwell': 'kenneth gainwell',
-    }
-
     # Apply replacements
-    for old, new in replacements.items():
+    for old, new in NAME_REPLACEMENTS.items():
         normalized = normalized.replace(old, new)
 
     return normalized.strip()

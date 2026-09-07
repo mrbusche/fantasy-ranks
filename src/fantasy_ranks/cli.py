@@ -8,6 +8,7 @@ rankings, and find the top available free agents.
 import subprocess
 import sys
 from pathlib import Path
+from time import perf_counter
 
 from fantasy_ranks.shared_functions import load_league_config
 
@@ -64,6 +65,8 @@ def run_platform_leagues(platform, leagues):
 
 def main() -> None:
     """Run the full fantasy football analysis pipeline in sequence."""
+    start_time = perf_counter()
+
     print('🏈 Fantasy Football Analysis Pipeline')
     print('Starting automated script execution...')
 
@@ -92,7 +95,7 @@ def main() -> None:
     run_module('fantasy_ranks.find_top_available')
 
     print(f'\n{"=" * 50}')
-    print('🎯 All scripts completed!')
+    print(f'🎯 All scripts completed! Total time: {perf_counter() - start_time:.2f} seconds')
     print(f'{"=" * 50}')
 
 
