@@ -254,6 +254,10 @@ def get_available_players_by_position(rankings, all_owned_players):
                 # Normalize the ranking player name
                 normalized_ranking_name = normalize_name(player_name)
 
+                if normalized_ranking_name in normalized_owned_players:
+                    is_owned = True
+                    continue
+
                 # Compare with pre-normalized names to avoid repeating work.
                 for normalized_owned_name in normalized_owned_players:
                     # Check various matching scenarios

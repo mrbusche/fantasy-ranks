@@ -60,6 +60,9 @@ def is_player_owned(ros_player, all_owned_players, normalized_owned_players=None
     if normalized_owned_players is None:
         normalized_owned_players = {normalize_name(name) for name in all_owned_players}
 
+    if normalized_ros_name in normalized_owned_players:
+        return True
+
     # Check against pre-normalized names to avoid repeating work.
     for normalized_owned_name in normalized_owned_players:
         # Check various matching scenarios
