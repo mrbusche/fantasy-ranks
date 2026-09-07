@@ -240,6 +240,7 @@ def find_player_ranking(player_name, position, rankings):
 def get_available_players_by_position(rankings, all_owned_players):
     """Get available (unowned) players by position from rankings data."""
     available_by_position = defaultdict(list)
+    normalized_owned_players = {normalize_name(name) for name in all_owned_players}
 
     for position, position_rankings in rankings.items():
         for player_name, ranking_info in position_rankings.items():
@@ -253,14 +254,13 @@ def get_available_players_by_position(rankings, all_owned_players):
                 # Normalize the ranking player name
                 normalized_ranking_name = normalize_name(player_name)
 
-                # Check against all owned players (both original and normalized)
-                for owned_name in all_owned_players:
-                    normalized_owned_name = normalize_name(owned_name)
-
+                # Compare with pre-normalized names to avoid repeating work.
+                for normalized_owned_name in normalized_owned_players:
                     # Check various matching scenarios
                     if (
                         normalized_ranking_name == normalized_owned_name
-                        or names_match(player_name, owned_name)
+                        or normalized_ranking_name in normalized_owned_name
+                        or normalized_owned_name in normalized_ranking_name
                         or (position == 'D/ST' and normalized_ranking_name in normalized_owned_name)
                         or (position == 'D/ST' and normalized_owned_name in normalized_ranking_name)
                     ):
@@ -443,7 +443,13 @@ def print_combined_position_rankings(players_by_position, all_owned_players, ran
 
 
 def output_rankings(
-    team_name, scoring_type='half', league_type='espn', file_prefix: str | None = None, league_name=None, custom_owned_path=None
+    team_name,
+    scoring_type='half',
+    league_type='espn',
+    file_prefix: str | None = None,
+    league_name=None,
+    custom_owned_path=None,
+    rankings=None,
 ):
     """
     Main function to analyze a team's roster against weekly rankings.
@@ -509,7 +515,8 @@ def output_rankings(
             all_owned_players.update(custom_owned)
             safe_print(f'  - Added {len(all_owned_players) - count_before} players from custom list')
 
-    rankings = load_rankings(scoring_type)
+    if rankings is None:
+        rankings = load_rankings(scoring_type)
 
     if not rankings:
         safe_print('**No rankings found!**')
@@ -555,6 +562,8 @@ def main():
 
     print(f'📋 Found {len(leagues)} leagues in configuration')
 
+    rankings_by_scoring_type = {}
+
     # Process each league
     for i, league in enumerate(leagues, 1):
         print(f'🔄 Processing league {i}/{len(leagues)}: {league.get("team_name", "Unknown")}')
@@ -571,14 +580,19 @@ def main():
         if i > 1:
             safe_print('\n---\n')
 
+        scoring_type = league['scoring_type']
+        if scoring_type not in rankings_by_scoring_type:
+            rankings_by_scoring_type[scoring_type] = load_rankings(scoring_type)
+
         # Run analysis for this league
         success = output_rankings(
             team_name=league['team_name'],
-            scoring_type=league['scoring_type'],
+            scoring_type=scoring_type,
             league_type=league['platform'],
             file_prefix=f'{league["platform"]}_{league["league_id"]}',
             league_name=league.get('league_name', ''),
             custom_owned_path=league.get('custom_owned_file'),
+            rankings=rankings_by_scoring_type[scoring_type],
         )
 
         if success:
