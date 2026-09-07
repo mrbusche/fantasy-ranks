@@ -71,3 +71,15 @@ def test_main_success():
         # Should run download_weekly_rankings + output_rankings + copy_newest_ros + find_top_available
         assert mock_run_module.call_count == 4
         assert mock_run_platform.call_count == 2
+
+
+def test_main_reports_total_execution_time(capsys):
+    config = {'leagues': []}
+    with (
+        patch('fantasy_ranks.cli.load_league_config', return_value=config),
+        patch('fantasy_ranks.cli.run_module'),
+        patch('fantasy_ranks.cli.perf_counter', side_effect=[100.0, 102.5]),
+    ):
+        main()
+
+    assert '🎯 All scripts completed! Total time: 2.50 seconds' in capsys.readouterr().out
