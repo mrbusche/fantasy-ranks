@@ -272,13 +272,30 @@ def test_fetch_league_metadata_yahoo_returns_empty():
 
 def test_fetch_sleeper_league_metadata_success():
     mock_response = MagicMock()
-    mock_response.json.return_value = {'name': 'My Sleeper League', 'scoring_settings': {'rec': 1.0}}
+    mock_response.json.return_value = {
+        'name': 'My Sleeper League',
+        'scoring_settings': {'rec': 1.0},
+        'roster_positions': ['QB', 'RB', 'RB', 'WR', 'TE', 'FLEX'],
+    }
     mock_response.raise_for_status.return_value = None
 
     with patch('fantasy_ranks.shared_functions.requests.get', return_value=mock_response):
         metadata = fetch_league_metadata('sleeper', '12345')
 
-    assert metadata == {'league_name': 'My Sleeper League', 'scoring_type': 'full'}
+    assert metadata == {
+        'league_name': 'My Sleeper League',
+        'scoring_type': 'full',
+        'lineup_slots': {
+            'QB': 1,
+            'RB': 2,
+            'WR': 1,
+            'TE': 1,
+            'FLEX': 1,
+            'SUPERFLEX': 0,
+            'D/ST': 0,
+            'K': 0,
+        },
+    }
 
 
 def test_fetch_sleeper_league_metadata_half_ppr():

@@ -293,6 +293,7 @@ def safe_print(text):
 TOP_N_AVAILABLE = 5
 BASE_SLOT_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST']
 FLEX_ELIGIBLE_POSITIONS = ['RB', 'WR', 'TE']
+SUPERFLEX_ELIGIBLE_POSITIONS = ['QB', 'RB', 'WR', 'TE']
 TOP_LIST_SECTIONS = [
     ('QB', 'Quarterbacks (QB)'),
     ('RB', 'Running Backs (RB)'),
@@ -345,8 +346,11 @@ def _evaluate_slot(starter_value, fa_value):
 
 def _print_starting_roster_table(players_by_position, available_by_position, rankings, lineup_slots):
     """Print one row per starting lineup slot, comparing each starter to the single best
-    available free agent at that position/FLEX so the recommendation is concrete and
-    actionable rather than a generic list of top players.
+    available free agent at that position/FLEX/SUPERFLEX so the recommendation is
+    concrete and actionable rather than a generic list of top players.
+
+    A slot configured with 0 starters still gets a single informational row so the
+    league's actual lineup shape (including positions it doesn't use) stays visible.
 
     Returns the set of (position, player_name) keys used as starters so callers can
     determine which rostered players are on the bench.
@@ -357,12 +361,11 @@ def _print_starting_roster_table(players_by_position, available_by_position, ran
     safe_print('|------|---------|---------------|----------------------------|---------|------------|')
 
     flex_candidates = []  # Leftover RB/WR/TE team players not needed for their own position's slots
+    superflex_pool = []  # Leftover QB players, plus FLEX-eligible players not used by FLEX slots
     starter_keys = set()
 
     for position in BASE_SLOT_POSITIONS:
         starters_needed = lineup_slots.get(position, DEFAULT_LINEUP_SLOTS.get(position, 1))
-        if starters_needed <= 0:
-            continue
 
         ordinal_map = ordinal_ranks[position]
 
@@ -379,8 +382,15 @@ def _print_starting_roster_table(players_by_position, available_by_position, ran
             )
         team_entries.sort(key=lambda e: e['rank'])
 
+        leftover_entries = team_entries[max(starters_needed, 0) :]
         if position in FLEX_ELIGIBLE_POSITIONS:
-            flex_candidates.extend(team_entries[starters_needed:])
+            flex_candidates.extend(leftover_entries)
+        elif position == 'QB':
+            superflex_pool.extend(leftover_entries)
+
+        if starters_needed <= 0:
+            _print_zero_starter_row(position)
+            continue
 
         available_entries = sorted(available_by_position.get(position, []), key=lambda p: p['rank'])
         best_fa = available_entries[0] if available_entries else None
@@ -393,9 +403,9 @@ def _print_starting_roster_table(players_by_position, available_by_position, ran
                 starter_keys.add((position, entry['name']))
 
     flex_slots = lineup_slots.get('FLEX', DEFAULT_LINEUP_SLOTS.get('FLEX', 0))
-    if flex_slots > 0:
-        flex_candidates.sort(key=lambda e: e['rank'])
+    flex_candidates.sort(key=lambda e: e['rank'])
 
+    if flex_slots > 0:
         flex_available = []
         for position in FLEX_ELIGIBLE_POSITIONS:
             flex_available.extend(available_by_position.get(position, []))
@@ -404,11 +414,40 @@ def _print_starting_roster_table(players_by_position, available_by_position, ran
 
         for idx in range(flex_slots):
             entry = flex_candidates[idx] if idx < len(flex_candidates) else None
-            _print_flex_slot_row(entry, best_flex_fa)
+            _print_pooled_slot_row('FLEX', entry, best_flex_fa)
+            if entry is not None:
+                starter_keys.add((entry['position'], entry['name']))
+
+    # Leftover FLEX-eligible players beyond FLEX allocation are also SUPERFLEX-eligible.
+    superflex_pool.extend(flex_candidates[max(flex_slots, 0) :])
+
+    superflex_slots = lineup_slots.get('SUPERFLEX', DEFAULT_LINEUP_SLOTS.get('SUPERFLEX', 0))
+    if superflex_slots > 0:
+        superflex_pool.sort(key=lambda e: e['rank'])
+
+        superflex_available = []
+        for position in SUPERFLEX_ELIGIBLE_POSITIONS:
+            superflex_available.extend(available_by_position.get(position, []))
+        superflex_available.sort(key=lambda p: p['rank'])
+        best_superflex_fa = superflex_available[0] if superflex_available else None
+
+        for idx in range(superflex_slots):
+            entry = superflex_pool[idx] if idx < len(superflex_pool) else None
+            _print_pooled_slot_row('SUPERFLEX', entry, best_superflex_fa)
             if entry is not None:
                 starter_keys.add((entry['position'], entry['name']))
 
     return starter_keys
+
+
+def _print_zero_starter_row(slot_label):
+    """Print a single informational row for a slot the league doesn't start (0 configured
+    starters), so the report still reflects the league's full lineup shape. Unused kicker
+    and defense slots are omitted because they do not provide actionable recommendations.
+    """
+    if slot_label in ('K', 'D/ST'):
+        return
+    safe_print(f'| {slot_label} | — (0 Starters Configured) | — | — | — | Not Started |')
 
 
 def _evaluate_empty_slot(best_fa):
@@ -441,16 +480,16 @@ def _print_slot_row(position, entry, ordinal_map, best_fa, fa_ordinal):
     safe_print(f'| {position} | {starter_cell} | {current_rank_cell} | {fa_cell} | {fa_rank_cell} | {evaluation} |')
 
 
-def _print_flex_slot_row(entry, best_flex_fa):
-    """Print a single starting-lineup row for a FLEX slot.
+def _print_pooled_slot_row(slot_label, entry, best_fa):
+    """Print a single starting-lineup row for a pooled multi-position slot (FLEX or SUPERFLEX).
 
-    FLEX uses the raw combined RB/WR/TE ranking (already comparable across positions)
-    instead of a per-position ordinal, shown as '#N'.
+    Pooled slots use each player's raw ranking (already comparable across the eligible
+    positions) instead of a per-position ordinal, shown as '#N'.
     """
     if entry is None:
         starter_cell = '— (Empty Slot)'
         current_rank_cell = '—'
-        evaluation = _evaluate_empty_slot(best_flex_fa)
+        evaluation = _evaluate_empty_slot(best_fa)
     else:
         ranking_info = entry['ranking_info']
         starter_position = ranking_info['position'] if ranking_info else None
@@ -458,18 +497,18 @@ def _print_flex_slot_row(entry, best_flex_fa):
         starter_cell = f'{entry["name"]}{pos_suffix}'
         starter_rank = ranking_info['rank'] if ranking_info else None
         current_rank_cell = f'#{starter_rank}' if starter_rank is not None else '—'
-        fa_rank = best_flex_fa['rank'] if best_flex_fa else None
+        fa_rank = best_fa['rank'] if best_fa else None
         evaluation = _evaluate_slot(starter_rank, fa_rank)
 
-    if best_flex_fa:
-        fa_position_label = _position_label(best_flex_fa['position'])
-        fa_cell = f'{best_flex_fa["name"]} ({fa_position_label} - {best_flex_fa["proTeam"]})'
-        fa_rank_cell = f'#{best_flex_fa["rank"]}'
+    if best_fa:
+        fa_position_label = _position_label(best_fa['position'])
+        fa_cell = f'{best_fa["name"]} ({fa_position_label} - {best_fa["proTeam"]})'
+        fa_rank_cell = f'#{best_fa["rank"]}'
     else:
         fa_cell = '—'
         fa_rank_cell = '—'
 
-    safe_print(f'| FLEX | {starter_cell} | {current_rank_cell} | {fa_cell} | {fa_rank_cell} | {evaluation} |')
+    safe_print(f'| {slot_label} | {starter_cell} | {current_rank_cell} | {fa_cell} | {fa_rank_cell} | {evaluation} |')
 
 
 def _print_bench_table(players_by_position, rankings, starter_keys):
@@ -509,21 +548,28 @@ def _print_bench_table(players_by_position, rankings, starter_keys):
     safe_print('')
 
 
-def _print_top_available_lists(available_by_position, rankings):
-    """Print the top N available free agents for each position, plus a combined FLEX list."""
+def _print_top_available_lists(available_by_position, rankings, lineup_slots):
+    """Print the top N available free agents for each position, plus a combined FLEX list
+    and (only when the league uses one) a combined SUPERFLEX list.
+    """
     ordinal_ranks = {position: _compute_position_ordinal_ranks(rankings, position) for position in BASE_SLOT_POSITIONS}
+
+    sections = list(TOP_LIST_SECTIONS)
+    if lineup_slots.get('SUPERFLEX', DEFAULT_LINEUP_SLOTS.get('SUPERFLEX', 0)) > 0:
+        sections.append(('SUPERFLEX', 'Superflex (QB/RB/WR/TE)'))
 
     safe_print(f'### Top {TOP_N_AVAILABLE} Available Players by Position')
     safe_print('')
 
-    for position, label in TOP_LIST_SECTIONS:
+    for position, label in sections:
         safe_print(f'#### {label}')
         safe_print('')
 
-        if position == 'FLEX':
+        if position in ('FLEX', 'SUPERFLEX'):
+            eligible_positions = FLEX_ELIGIBLE_POSITIONS if position == 'FLEX' else SUPERFLEX_ELIGIBLE_POSITIONS
             entries = []
-            for flex_pos in FLEX_ELIGIBLE_POSITIONS:
-                entries.extend(available_by_position.get(flex_pos, []))
+            for pool_position in eligible_positions:
+                entries.extend(available_by_position.get(pool_position, []))
             entries.sort(key=lambda p: p['rank'])
             top_entries = entries[:TOP_N_AVAILABLE]
             rows = [
@@ -576,7 +622,7 @@ def print_combined_position_rankings(
 
     _print_bench_table(players_by_position, rankings, starter_keys)
 
-    _print_top_available_lists(available_by_position, rankings)
+    _print_top_available_lists(available_by_position, rankings, lineup_slots)
 
 
 def output_rankings(

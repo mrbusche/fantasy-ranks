@@ -277,6 +277,71 @@ def test_print_combined_position_rankings_unranked_and_empty_slot():
     assert '| QB | — (Empty Slot) | — | — | — | No Player Rostered |' in output_text
 
 
+def test_print_combined_position_rankings_zero_starter_row():
+    output_rankings_mod.markdown_content = []
+    players_by_position = {
+        'QB': [{'name': 'Starter QB', 'proTeam': 'BUF', 'injured': False, 'totalPoints': 20.0}],
+    }
+    all_owned_players = {'Starter QB'}
+    rankings = {
+        'QB': {'Starter QB': {'rank': 1, 'team': 'BUF', 'position': 'QB', 'player_name': 'Starter QB'}},
+        'RB': {},
+        'WR': {},
+        'TE': {},
+        'D/ST': {},
+        'K': {},
+    }
+
+    # This league doesn't use kickers or defense at all - both rows should be omitted.
+    print_combined_position_rankings(
+        players_by_position,
+        all_owned_players,
+        rankings,
+        'My Team',
+        'My League',
+        lineup_slots={'QB': 1, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'K': 0, 'D/ST': 0},
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    assert '| K |' not in output_text
+    assert '| D/ST |' not in output_text
+
+
+def test_print_combined_position_rankings_superflex():
+    output_rankings_mod.markdown_content = []
+    players_by_position = {
+        'QB': [
+            {'name': 'Starter QB', 'proTeam': 'BUF', 'injured': False, 'totalPoints': 20.0},
+            {'name': 'Backup QB', 'proTeam': 'NYJ', 'injured': False, 'totalPoints': 10.0},
+        ],
+    }
+    all_owned_players = {'Starter QB', 'Backup QB'}
+    rankings = {
+        'QB': {
+            'Starter QB': {'rank': 1, 'team': 'BUF', 'position': 'QB', 'player_name': 'Starter QB'},
+            'Backup QB': {'rank': 5, 'team': 'NYJ', 'position': 'QB', 'player_name': 'Backup QB'},
+            'FA QB': {'rank': 8, 'team': 'FA', 'position': 'QB', 'player_name': 'FA QB'},
+        },
+        'RB': {},
+        'WR': {},
+        'TE': {},
+        'D/ST': {},
+        'K': {},
+    }
+
+    # Only 1 QB slot is needed, so Backup QB should fill the SUPERFLEX slot using the raw rank.
+    print_combined_position_rankings(
+        players_by_position,
+        all_owned_players,
+        rankings,
+        'My Team',
+        'My League',
+        lineup_slots={'QB': 1, 'FLEX': 0, 'SUPERFLEX': 1, 'RB': 0, 'WR': 0, 'TE': 0, 'K': 0, 'D/ST': 0},
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    assert '| SUPERFLEX | Backup QB (QB) | #5 | FA QB (QB - FA) | #8 | Optimal |' in output_text
+    assert '#### Superflex (QB/RB/WR/TE)' in output_text
+
+
 def test_print_combined_position_rankings_shows_bench():
     output_rankings_mod.markdown_content = []
     players_by_position = {

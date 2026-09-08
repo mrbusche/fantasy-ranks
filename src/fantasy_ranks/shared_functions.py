@@ -43,6 +43,7 @@ SLEEPER_SLOT_LABEL_MAP = {
     'DEF': 'D/ST',
     'K': 'K',
 }
+SLEEPER_LINEUP_POSITIONS = ('QB', 'RB', 'WR', 'TE', 'FLEX', 'SUPERFLEX', 'D/ST', 'K')
 
 
 NAME_REPLACEMENTS = {
@@ -166,8 +167,12 @@ def _fetch_sleeper_league_metadata(league_id):
     if scoring_type:
         metadata['scoring_type'] = scoring_type
 
-    roster_positions = data.get('roster_positions') or []
-    lineup_slots = _aggregate_lineup_slots(Counter(roster_positions), SLEEPER_SLOT_LABEL_MAP)
+    roster_positions = data.get('roster_positions')
+    if isinstance(roster_positions, list):
+        lineup_slots = dict.fromkeys(SLEEPER_LINEUP_POSITIONS, 0)
+        lineup_slots.update(_aggregate_lineup_slots(Counter(roster_positions), SLEEPER_SLOT_LABEL_MAP))
+    else:
+        lineup_slots = {}
     if lineup_slots:
         metadata['lineup_slots'] = lineup_slots
 
