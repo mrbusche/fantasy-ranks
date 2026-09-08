@@ -10,6 +10,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from fantasy_ranks.shared_functions import (
+    DEFAULT_LINEUP_SLOTS,
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -289,160 +290,293 @@ def safe_print(text):
     markdown_content.append(text)
 
 
-def print_combined_position_rankings(players_by_position, all_owned_players, rankings, team_name, league_name):
-    """Print team's players combined with top 5 available for each position."""
-    safe_print(f'### COMBINED RANKINGS: {league_name.upper()} {team_name.upper()} + TOP 5 AVAILABLE BY POSITION')
-    safe_print('')
+TOP_N_AVAILABLE = 5
+BASE_SLOT_POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'D/ST']
+FLEX_ELIGIBLE_POSITIONS = ['RB', 'WR', 'TE']
+TOP_LIST_SECTIONS = [
+    ('QB', 'Quarterbacks (QB)'),
+    ('RB', 'Running Backs (RB)'),
+    ('WR', 'Wide Receivers (WR)'),
+    ('TE', 'Tight Ends (TE)'),
+    ('FLEX', 'Flex (RB/WR/TE)'),
+    ('D/ST', 'Defense (D/ST)'),
+    ('K', 'Kickers (K)'),
+]
 
-    # Get available players from rankings
-    available_by_position = get_available_players_by_position(rankings, all_owned_players)
 
-    for position in ['QB', 'RB', 'WR', 'TE', 'Flex', 'K', 'D/ST']:
-        if position == 'Flex':
-            # Handle Flex position (combine RB, WR, and TE)
-            team_players = []
+def _position_label(position):
+    """Short display label for a position (D/ST displays as DST to match FA name formatting)."""
+    return 'DST' if position == 'D/ST' else position
 
-            # Combine team players from RB, WR, and TE
-            for flex_pos in ['RB', 'WR', 'TE']:
-                if flex_pos in players_by_position:
-                    for player in players_by_position[flex_pos]:
-                        ranking_info = find_player_ranking(player['name'], flex_pos, rankings)
-                        if ranking_info:
-                            team_players.append(
-                                {
-                                    'name': player['name'],
-                                    'team': player['proTeam'],
-                                    'rank': ranking_info['rank'],
-                                    'owned_by': 'Team',
-                                    'position': flex_pos,  # Keep original position for display
-                                }
-                            )
 
-            # Combine available players from RB, WR, and TE
-            available_players = []
-            for flex_pos in ['RB', 'WR', 'TE']:
-                flex_available = available_by_position.get(flex_pos, [])
-                for player in flex_available:
-                    available_players.append(
-                        {
-                            'name': player['name'],
-                            'proTeam': player['proTeam'],
-                            'rank': player['rank'],
-                            'owned_by': 'Available',
-                            'position': flex_pos,
-                        }
-                    )
+def _format_rank(position, ordinal):
+    """Format a position-specific ordinal rank for display, e.g. 'RB5', 'QB26'."""
+    return f'{_position_label(position)}{ordinal}'
 
-            # Sort available players and take top 10 for Flex (more options needed)
-            available_players.sort(key=lambda x: x['rank'])
-            top_available = available_players[:10]
 
-            # Add ownership info and team consistency
-            for player in top_available:
-                player['team'] = player['proTeam']
+def _compute_position_ordinal_ranks(rankings, position):
+    """Compute a 1-based ordinal rank per player within a single position.
 
-        else:
-            # Get team's players for this position
-            team_players = []
-            if position in players_by_position:
-                for player in players_by_position[position]:
-                    ranking_info = find_player_ranking(player['name'], position, rankings)
-                    if ranking_info:
-                        team_players.append(
-                            {
-                                'name': player['name'],
-                                'team': player['proTeam'],  # Fix: use "proTeam" from the player data
-                                'rank': ranking_info['rank'],
-                                'owned_by': 'Team',
-                            }
-                        )
+    RB/WR/TE share a combined flex ranking file, so their raw 'rank' values are ranked
+    across all three positions together rather than purely within one position. This
+    recomputes a position-only ordinal (e.g. 'RB5') so the starting roster table shows
+    ranks relative to other players at the same position, which is what a start/sit
+    decision actually needs.
+    """
+    entries = sorted(rankings.get(position, {}).values(), key=lambda info: info['rank'])
+    return {info['player_name']: idx + 1 for idx, info in enumerate(entries)}
 
-            # Get top 5 available players for this position
-            available_players = available_by_position.get(position, [])
 
-            # Sort available players and take top 5
-            available_players.sort(key=lambda x: x['rank'])
-            top_available = available_players[:5]
+def _evaluate_slot(starter_value, fa_value):
+    """Compare a starter's rank against the best available free agent's rank.
 
-            # Add ownership info to available players
-            for player in top_available:
-                player['owned_by'] = 'Available'
-                player['team'] = player['proTeam']  # Ensure consistency in key naming
+    Returns 'Unranked' if the starter has no ranking, 'No Free Agents Available' if there
+    is no free agent to compare against, 'Optimal' if the starter is already the better
+    option, or '+N Ranks Better' showing how much stronger the free agent's rank is.
+    """
+    if starter_value is None:
+        return 'Unranked'
+    if fa_value is None:
+        return 'No Free Agents Available'
+    if starter_value <= fa_value:
+        return 'Optimal'
+    return f'+{starter_value - fa_value} Ranks Better'
 
-        # Combine all players for this position
-        all_players = team_players + top_available
 
-        if not all_players:
+def _print_starting_roster_table(players_by_position, available_by_position, rankings, lineup_slots):
+    """Print one row per starting lineup slot, comparing each starter to the single best
+    available free agent at that position/FLEX so the recommendation is concrete and
+    actionable rather than a generic list of top players.
+
+    Returns the set of (position, player_name) keys used as starters so callers can
+    determine which rostered players are on the bench.
+    """
+    ordinal_ranks = {position: _compute_position_ordinal_ranks(rankings, position) for position in BASE_SLOT_POSITIONS}
+
+    safe_print('| Slot | Starter | Current Rank | Best Available Free Agent | FA Rank | Evaluation |')
+    safe_print('|------|---------|---------------|----------------------------|---------|------------|')
+
+    flex_candidates = []  # Leftover RB/WR/TE team players not needed for their own position's slots
+    starter_keys = set()
+
+    for position in BASE_SLOT_POSITIONS:
+        starters_needed = lineup_slots.get(position, DEFAULT_LINEUP_SLOTS.get(position, 1))
+        if starters_needed <= 0:
             continue
 
-        # Sort by rank
-        all_players.sort(key=lambda x: x['rank'])
+        ordinal_map = ordinal_ranks[position]
 
-        safe_print(f'#### {position}')
-        safe_print('')
-
-        # Add position column for Flex rankings
-        if position == 'Flex':
-            safe_print('| Rank | Player | Team | Pos | Owner |')
-            safe_print('|------|--------|------|-----|-------|')
-        else:
-            safe_print('| Rank | Player | Team | Owner |')
-            safe_print('|------|--------|------|-------|')
-
-        for player in all_players:
-            rank = player['rank']
-            name = player['name']
-            team = player['team']
-            owner = player['owned_by']
-
-            # Owner formatting
-            if owner == 'Team':
-                owner_display = '🏆 Team'
-            else:
-                owner_display = '⚡ Free'
-
-            # Format output based on position type
-            if position == 'Flex':
-                pos = player.get('position', position)
-                safe_print(f'| {rank} | {name} | {team} | {pos} | {owner_display} |')
-            else:
-                safe_print(f'| {rank} | {name} | {team} | {owner_display} |')
-
-        safe_print('')
-
-    # Print unranked players on the roster
-    safe_print('### Unranked Players on Roster')
-    safe_print('')
-
-    unranked_list = []
-
-    for position, players in players_by_position.items():
-        for player in players:
-            # Check if player is ranked
+        team_entries = []
+        for player in players_by_position.get(position, []):
             ranking_info = find_player_ranking(player['name'], position, rankings)
-            if not ranking_info:
-                unranked_list.append(
-                    {
-                        'name': player['name'],
-                        'team': player['proTeam'],
-                        'position': position,
-                        'points': player['totalPoints'],
-                    }
-                )
+            team_entries.append(
+                {
+                    'name': player['name'],
+                    'position': position,
+                    'ranking_info': ranking_info,
+                    'rank': ranking_info['rank'] if ranking_info else float('inf'),
+                }
+            )
+        team_entries.sort(key=lambda e: e['rank'])
 
-    if unranked_list:
-        safe_print('| Player | Team | Position | Points |')
-        safe_print('|--------|------|----------|--------|')
+        if position in FLEX_ELIGIBLE_POSITIONS:
+            flex_candidates.extend(team_entries[starters_needed:])
 
-        # Sort by points descending
-        unranked_list.sort(key=lambda x: x['points'], reverse=True)
+        available_entries = sorted(available_by_position.get(position, []), key=lambda p: p['rank'])
+        best_fa = available_entries[0] if available_entries else None
+        fa_ordinal = ordinal_map.get(best_fa['name']) if best_fa else None
 
-        for player in unranked_list:
-            safe_print(f'| {player["name"]} | {player["team"]} | {player["position"]} | {player["points"]} |')
+        for idx in range(starters_needed):
+            entry = team_entries[idx] if idx < len(team_entries) else None
+            _print_slot_row(position, entry, ordinal_map, best_fa, fa_ordinal)
+            if entry is not None:
+                starter_keys.add((position, entry['name']))
+
+    flex_slots = lineup_slots.get('FLEX', DEFAULT_LINEUP_SLOTS.get('FLEX', 0))
+    if flex_slots > 0:
+        flex_candidates.sort(key=lambda e: e['rank'])
+
+        flex_available = []
+        for position in FLEX_ELIGIBLE_POSITIONS:
+            flex_available.extend(available_by_position.get(position, []))
+        flex_available.sort(key=lambda p: p['rank'])
+        best_flex_fa = flex_available[0] if flex_available else None
+
+        for idx in range(flex_slots):
+            entry = flex_candidates[idx] if idx < len(flex_candidates) else None
+            _print_flex_slot_row(entry, best_flex_fa)
+            if entry is not None:
+                starter_keys.add((entry['position'], entry['name']))
+
+    return starter_keys
+
+
+def _evaluate_empty_slot(best_fa):
+    """Evaluation message for a starting slot with no rostered player at all."""
+    return 'Fill via Free Agent' if best_fa else 'No Player Rostered'
+
+
+def _print_slot_row(position, entry, ordinal_map, best_fa, fa_ordinal):
+    """Print a single starting-lineup row for a non-FLEX position."""
+    position_label = _position_label(position)
+
+    if entry is None:
+        starter_cell = '— (Empty Slot)'
+        current_rank_cell = '—'
+        evaluation = _evaluate_empty_slot(best_fa)
     else:
-        safe_print('No unranked players found on roster.')
+        starter_cell = f'{entry["name"]} ({position_label})'
+        ranking_info = entry['ranking_info']
+        starter_ordinal = ordinal_map.get(ranking_info['player_name']) if ranking_info else None
+        current_rank_cell = _format_rank(position, starter_ordinal) if starter_ordinal else '—'
+        evaluation = _evaluate_slot(starter_ordinal, fa_ordinal)
+
+    if best_fa:
+        fa_cell = f'{best_fa["name"]} ({position_label} - {best_fa["proTeam"]})'
+        fa_rank_cell = _format_rank(position, fa_ordinal) if fa_ordinal else '—'
+    else:
+        fa_cell = '—'
+        fa_rank_cell = '—'
+
+    safe_print(f'| {position} | {starter_cell} | {current_rank_cell} | {fa_cell} | {fa_rank_cell} | {evaluation} |')
+
+
+def _print_flex_slot_row(entry, best_flex_fa):
+    """Print a single starting-lineup row for a FLEX slot.
+
+    FLEX uses the raw combined RB/WR/TE ranking (already comparable across positions)
+    instead of a per-position ordinal, shown as '#N'.
+    """
+    if entry is None:
+        starter_cell = '— (Empty Slot)'
+        current_rank_cell = '—'
+        evaluation = _evaluate_empty_slot(best_flex_fa)
+    else:
+        ranking_info = entry['ranking_info']
+        starter_position = ranking_info['position'] if ranking_info else None
+        pos_suffix = f' ({starter_position})' if starter_position else ''
+        starter_cell = f'{entry["name"]}{pos_suffix}'
+        starter_rank = ranking_info['rank'] if ranking_info else None
+        current_rank_cell = f'#{starter_rank}' if starter_rank is not None else '—'
+        fa_rank = best_flex_fa['rank'] if best_flex_fa else None
+        evaluation = _evaluate_slot(starter_rank, fa_rank)
+
+    if best_flex_fa:
+        fa_position_label = _position_label(best_flex_fa['position'])
+        fa_cell = f'{best_flex_fa["name"]} ({fa_position_label} - {best_flex_fa["proTeam"]})'
+        fa_rank_cell = f'#{best_flex_fa["rank"]}'
+    else:
+        fa_cell = '—'
+        fa_rank_cell = '—'
+
+    safe_print(f'| FLEX | {starter_cell} | {current_rank_cell} | {fa_cell} | {fa_rank_cell} | {evaluation} |')
+
+
+def _print_bench_table(players_by_position, rankings, starter_keys):
+    """Print the team's remaining rostered players (those not in a starting slot) along
+    with their current rank, so bench depth is visible alongside the starting lineup.
+    """
+    ordinal_ranks = {position: _compute_position_ordinal_ranks(rankings, position) for position in BASE_SLOT_POSITIONS}
+
+    safe_print('### Bench')
+    safe_print('')
+
+    rows = []
+    for position in BASE_SLOT_POSITIONS:
+        ordinal_map = ordinal_ranks[position]
+        for player in players_by_position.get(position, []):
+            if (position, player['name']) in starter_keys:
+                continue
+
+            ranking_info = find_player_ranking(player['name'], position, rankings)
+            ordinal = ordinal_map.get(player['name']) if ranking_info else None
+            rank_label = _format_rank(position, ordinal) if ordinal else 'Unranked'
+            sort_rank = ordinal if ordinal is not None else float('inf')
+            rows.append((sort_rank, f'{player["name"]} ({_position_label(position)})', rank_label))
+
+    if not rows:
+        safe_print('No bench players found.')
+        safe_print('')
+        return
+
+    rows.sort(key=lambda r: r[0])
+
+    safe_print('| Player | Current Rank |')
+    safe_print('|--------|---------------|')
+    for _, player_cell, rank_cell in rows:
+        safe_print(f'| {player_cell} | {rank_cell} |')
 
     safe_print('')
+
+
+def _print_top_available_lists(available_by_position, rankings):
+    """Print the top N available free agents for each position, plus a combined FLEX list."""
+    ordinal_ranks = {position: _compute_position_ordinal_ranks(rankings, position) for position in BASE_SLOT_POSITIONS}
+
+    safe_print(f'### Top {TOP_N_AVAILABLE} Available Players by Position')
+    safe_print('')
+
+    for position, label in TOP_LIST_SECTIONS:
+        safe_print(f'#### {label}')
+        safe_print('')
+
+        if position == 'FLEX':
+            entries = []
+            for flex_pos in FLEX_ELIGIBLE_POSITIONS:
+                entries.extend(available_by_position.get(flex_pos, []))
+            entries.sort(key=lambda p: p['rank'])
+            top_entries = entries[:TOP_N_AVAILABLE]
+            rows = [
+                (f'{p["name"]} ({_position_label(p["position"])} - {p["proTeam"]})', f'#{p["rank"]}')
+                for p in top_entries
+            ]
+        else:
+            entries = sorted(available_by_position.get(position, []), key=lambda p: p['rank'])
+            top_entries = entries[:TOP_N_AVAILABLE]
+            ordinal_map = ordinal_ranks[position]
+            rows = []
+            for p in top_entries:
+                ordinal = ordinal_map.get(p['name'])
+                rank_label = _format_rank(position, ordinal) if ordinal else '—'
+                rows.append((f'{p["name"]} ({_position_label(position)} - {p["proTeam"]})', rank_label))
+
+        if not rows:
+            safe_print('No available players found.')
+        else:
+            safe_print('| Player | Rank |')
+            safe_print('|--------|------|')
+            for name_cell, rank_cell in rows:
+                safe_print(f'| {name_cell} | {rank_cell} |')
+
+        safe_print('')
+
+
+def print_combined_position_rankings(
+    players_by_position, all_owned_players, rankings, team_name, league_name, lineup_slots=None
+):
+    """Print the team's concrete starting lineup recommendation and the top available
+    free agents by position.
+
+    The starting roster table lists one row per starting slot (based on the league's
+    actual lineup_slots), each compared against the single best available free agent at
+    that slot with an explicit evaluation ('Optimal' or '+N Ranks Better'). A Bench
+    section then lists remaining rostered players and their current rank, followed by a
+    section listing the top available free agents by position (including a combined
+    FLEX view) for a broader picture of the waiver wire.
+    """
+    lineup_slots = lineup_slots or DEFAULT_LINEUP_SLOTS
+
+    safe_print(f'### {league_name} {team_name} — Starting Roster')
+    safe_print('')
+
+    available_by_position = get_available_players_by_position(rankings, all_owned_players)
+
+    starter_keys = _print_starting_roster_table(players_by_position, available_by_position, rankings, lineup_slots)
+    safe_print('')
+
+    _print_bench_table(players_by_position, rankings, starter_keys)
+
+    _print_top_available_lists(available_by_position, rankings)
 
 
 def output_rankings(
@@ -453,6 +587,7 @@ def output_rankings(
     league_name=None,
     custom_owned_path=None,
     rankings=None,
+    lineup_slots=None,
 ):
     """
     Main function to analyze a team's roster against weekly rankings.
@@ -464,6 +599,9 @@ def output_rankings(
         file_prefix (str): Optional prefix for the league files (e.g., "LeagueOfDreams")
         league_name (str): Name of the league for display
         custom_owned_path (str): Optional path to a custom JSON file with owned players
+        lineup_slots (dict): Starting lineup slot counts pulled from the league's source system
+            (e.g. {'QB': 1, 'RB': 2, 'WR': 2, 'TE': 1, 'FLEX': 1, 'D/ST': 1, 'K': 1}). Falls back
+            to DEFAULT_LINEUP_SLOTS when not provided.
 
     Returns:
         bool: True if analysis completed successfully, False otherwise
@@ -525,8 +663,10 @@ def output_rankings(
         safe_print('**No rankings found!**')
         return False
 
-    # Show combined rankings (team's players + top 5 available by position)
-    print_combined_position_rankings(players_by_position, all_owned_players, rankings, team_name, league_name)
+    # Show combined rankings (team's players marked Start/Bench + available by position)
+    print_combined_position_rankings(
+        players_by_position, all_owned_players, rankings, team_name, league_name, lineup_slots
+    )
 
     return True
 
@@ -596,6 +736,7 @@ def main():
             league_name=league.get('league_name', ''),
             custom_owned_path=league.get('custom_owned_file'),
             rankings=rankings_by_scoring_type[scoring_type],
+            lineup_slots=league.get('lineup_slots'),
         )
 
         if success:

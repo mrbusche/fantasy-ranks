@@ -75,6 +75,7 @@ def test_load_league_config_success(tmp_path):
                 'scoring_type': 'half',
                 'team_name': 'My Team',
                 'league_name': 'My League',
+                'lineup_slots': {'QB': 1, 'RB': 2, 'WR': 2, 'TE': 1, 'FLEX': 1, 'D/ST': 1, 'K': 1},
             }
         ]
     }
@@ -249,6 +250,7 @@ def test_load_league_config_does_not_override_provided_metadata(tmp_path):
                 'team_name': 'My Team',
                 'scoring_type': 'half',
                 'league_name': 'Custom Name',
+                'lineup_slots': {'QB': 2},
             }
         ]
     }
@@ -261,6 +263,7 @@ def test_load_league_config_does_not_override_provided_metadata(tmp_path):
     mock_fetch.assert_not_called()
     assert result['leagues'][0]['scoring_type'] == 'half'
     assert result['leagues'][0]['league_name'] == 'Custom Name'
+    assert result['leagues'][0]['lineup_slots'] == {'QB': 2}
 
 
 def test_fetch_league_metadata_yahoo_returns_empty():

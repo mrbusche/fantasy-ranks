@@ -40,7 +40,9 @@ Create a file named `config.json` in the root. It must be valid JSON containing 
 }
 ```
 
-For ESPN and Sleeper leagues, `scoring_type` and `league_name` are pulled automatically from the league's source system if not provided in `config.json`. Yahoo! rosters are maintained manually, so those two fields must be set explicitly for Yahoo! leagues (they default to `"half"` and blank otherwise).
+For ESPN and Sleeper leagues, `scoring_type`, `league_name`, and `lineup_slots` are pulled automatically from the league's source system if not provided in `config.json`. Yahoo! rosters are maintained manually, so those fields must be set explicitly for Yahoo! leagues (they default to `"half"`, blank, and a standard 1 QB/2 RB/2 WR/1 TE/1 FLEX/1 D-ST/1 K lineup otherwise).
+
+`lineup_slots` is what makes the weekly start/sit report concrete: it tells the report exactly how many starters your league needs at each position (e.g. a league starting 2 QBs will build a Starting Roster table with 2 QB rows instead of just one), so the recommendations match your league's real starting lineup instead of a generic default. You normally don't need to set this yourself - it's auto-detected from ESPN's roster settings or Sleeper's `roster_positions`.
 
 Create a `.env` file in the root:
 
@@ -85,6 +87,12 @@ uv run fantasy-ranks
 ```
 
 This downloads the latest weekly rankings, pulls your rosters from ESPN and Sleeper, uses the manually maintained Yahoo! roster files, and writes the resulting analysis to `lineups/start-sit.md`.
+
+For each team, the report includes:
+
+- A **Starting Roster** table listing each starting slot (based on `lineup_slots`), the current starter and their position rank, the best available free agent at that slot and their rank, and an evaluation (`Optimal`, `+N Ranks Better`, `Unranked`, etc.).
+- A **Bench** table listing the rest of the team's rostered players (those not filling a starting or FLEX slot) and their current position rank.
+- A **Top 5 Available Players by Position** section listing the best free agents at QB, RB, WR, TE, FLEX, and D-ST/K.
 
 ## Importing Yahoo! rosters
 

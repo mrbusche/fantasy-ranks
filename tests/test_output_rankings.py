@@ -189,22 +189,18 @@ def test_safe_print_and_save_markdown(tmp_path):
     assert 'Test Content' in content
 
 
-def test_print_combined_position_rankings():
+def test_print_combined_position_rankings_optimal_and_header():
     output_rankings_mod.markdown_content = []
     players_by_position = {
         'QB': [{'name': 'Josh Allen', 'proTeam': 'BUF', 'injured': False, 'totalPoints': 20.0}],
-        'RB': [{'name': 'Saquon Barkley', 'proTeam': 'PHI', 'injured': False, 'totalPoints': 15.0}],
     }
-    all_owned_players = {'Josh Allen', 'Saquon Barkley'}
+    all_owned_players = {'Josh Allen'}
     rankings = {
         'QB': {
             'Josh Allen': {'rank': 1, 'team': 'BUF', 'position': 'QB', 'player_name': 'Josh Allen'},
             'Lamar Jackson': {'rank': 2, 'team': 'BAL', 'position': 'QB', 'player_name': 'Lamar Jackson'},
         },
-        'RB': {
-            'Saquon Barkley': {'rank': 1, 'team': 'PHI', 'position': 'RB', 'player_name': 'Saquon Barkley'},
-            'Breece Hall': {'rank': 2, 'team': 'NYJ', 'position': 'RB', 'player_name': 'Breece Hall'},
-        },
+        'RB': {},
         'WR': {},
         'TE': {},
         'D/ST': {},
@@ -213,21 +209,136 @@ def test_print_combined_position_rankings():
 
     print_combined_position_rankings(players_by_position, all_owned_players, rankings, 'My Team', 'My League')
     output_text = '\n'.join(output_rankings_mod.markdown_content)
-    assert '### COMBINED RANKINGS: MY LEAGUE MY TEAM' in output_text
-    assert 'Josh Allen' in output_text
-    assert 'Lamar Jackson' in output_text
-    assert '🏆 Team' in output_text
-    assert '⚡ Free' in output_text
+    assert '### My League My Team — Starting Roster' in output_text
+    # Josh Allen (QB1) is better ranked than the best available FA Lamar Jackson (QB2) - Optimal.
+    assert '| QB | Josh Allen (QB) | QB1 | Lamar Jackson (QB - BAL) | QB2 | Optimal |' in output_text
+    assert '### Top 5 Available Players by Position' in output_text
+    assert '#### Quarterbacks (QB)' in output_text
+    assert '| Lamar Jackson (QB - BAL) | QB2 |' in output_text
 
 
-def test_print_combined_position_rankings_includes_unranked_players():
+def test_print_combined_position_rankings_free_agent_better_and_flex():
     output_rankings_mod.markdown_content = []
-    players = {
-        'WR': [{'name': 'Unranked', 'proTeam': 'FA', 'totalPoints': 12.0}],
+    players_by_position = {
+        'RB': [
+            {'name': 'Saquon Barkley', 'proTeam': 'PHI', 'injured': False, 'totalPoints': 15.0},
+            {'name': 'Bench RB', 'proTeam': 'NYJ', 'injured': False, 'totalPoints': 5.0},
+        ],
     }
-    print_combined_position_rankings(players, set(), {'WR': {}}, 'Team', 'League')
-    output = '\n'.join(output_rankings_mod.markdown_content)
-    assert '| Unranked | FA | WR | 12.0 |' in output
+    all_owned_players = {'Saquon Barkley', 'Bench RB'}
+    rankings = {
+        'QB': {},
+        'RB': {
+            'Saquon Barkley': {'rank': 1, 'team': 'PHI', 'position': 'RB', 'player_name': 'Saquon Barkley'},
+            'Bench RB': {'rank': 5, 'team': 'NYJ', 'position': 'RB', 'player_name': 'Bench RB'},
+        },
+        'WR': {},
+        'TE': {},
+        'D/ST': {},
+        'K': {},
+    }
+
+    # This league only starts 1 RB and 1 FLEX; the bench RB should fill FLEX since there
+    # is no better available free agent, and the FLEX slot should use the raw '#' rank.
+    print_combined_position_rankings(
+        players_by_position,
+        all_owned_players,
+        rankings,
+        'My Team',
+        'My League',
+        lineup_slots={'RB': 1, 'FLEX': 1},
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    assert '| RB | Saquon Barkley (RB) | RB1 | — | — | No Free Agents Available |' in output_text
+    assert '| FLEX | Bench RB (RB) | #5 | — | — | No Free Agents Available |' in output_text
+
+
+def test_print_combined_position_rankings_unranked_and_empty_slot():
+    output_rankings_mod.markdown_content = []
+    players_by_position = {
+        'QB': [{'name': 'Undrafted QB', 'proTeam': 'FA', 'injured': False, 'totalPoints': 3.0}],
+    }
+    all_owned_players = {'Undrafted QB'}
+    rankings = {
+        'QB': {},
+        'RB': {},
+        'WR': {},
+        'TE': {},
+        'D/ST': {},
+        'K': {},
+    }
+
+    # Two QB starter slots but only one (unranked) rostered QB - the second slot is empty.
+    print_combined_position_rankings(
+        players_by_position, all_owned_players, rankings, 'My Team', 'My League', lineup_slots={'QB': 2}
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    assert '| QB | Undrafted QB (QB) | — | — | — | Unranked |' in output_text
+    assert '| QB | — (Empty Slot) | — | — | — | No Player Rostered |' in output_text
+
+
+def test_print_combined_position_rankings_shows_bench():
+    output_rankings_mod.markdown_content = []
+    players_by_position = {
+        'QB': [
+            {'name': 'Starter QB', 'proTeam': 'BUF', 'injured': False, 'totalPoints': 20.0},
+            {'name': 'Backup QB', 'proTeam': 'NYJ', 'injured': False, 'totalPoints': 5.0},
+        ],
+        'RB': [
+            {'name': 'Starter RB', 'proTeam': 'PHI', 'injured': False, 'totalPoints': 15.0},
+        ],
+    }
+    all_owned_players = {'Starter QB', 'Backup QB', 'Starter RB'}
+    rankings = {
+        'QB': {
+            'Starter QB': {'rank': 1, 'team': 'BUF', 'position': 'QB', 'player_name': 'Starter QB'},
+            'Backup QB': {'rank': 12, 'team': 'NYJ', 'position': 'QB', 'player_name': 'Backup QB'},
+        },
+        'RB': {
+            'Starter RB': {'rank': 1, 'team': 'PHI', 'position': 'RB', 'player_name': 'Starter RB'},
+        },
+        'WR': {},
+        'TE': {},
+        'D/ST': {},
+        'K': {},
+    }
+
+    # Only 1 QB and 1 RB slot are needed, and there is no FLEX, so Backup QB stays on the bench.
+    print_combined_position_rankings(
+        players_by_position,
+        all_owned_players,
+        rankings,
+        'My Team',
+        'My League',
+        lineup_slots={'QB': 1, 'RB': 1, 'FLEX': 0},
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    assert '### Bench' in output_text
+    assert '| Backup QB (QB) | QB2 |' in output_text
+    assert 'Starter QB (QB)' not in output_text.split('### Bench')[1].split('### Top')[0]
+
+
+def test_print_combined_position_rankings_empty_bench_message():
+    output_rankings_mod.markdown_content = []
+    players_by_position = {
+        'QB': [{'name': 'Only QB', 'proTeam': 'BUF', 'injured': False, 'totalPoints': 20.0}],
+    }
+    all_owned_players = {'Only QB'}
+    rankings = {
+        'QB': {'Only QB': {'rank': 1, 'team': 'BUF', 'position': 'QB', 'player_name': 'Only QB'}},
+        'RB': {},
+        'WR': {},
+        'TE': {},
+        'D/ST': {},
+        'K': {},
+    }
+
+    print_combined_position_rankings(
+        players_by_position, all_owned_players, rankings, 'My Team', 'My League', lineup_slots={'QB': 1, 'FLEX': 0}
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    bench_section = output_text.split('### Bench')[1].split('### Top')[0]
+    assert 'No bench players found.' in bench_section
 
 
 def test_output_rankings_custom_file_and_missing_rankings(tmp_path):
