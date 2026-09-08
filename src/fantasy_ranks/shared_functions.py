@@ -3,8 +3,11 @@
 import json
 from pathlib import Path
 
+import requests
+
 VALID_PLATFORMS = ('espn', 'sleeper', 'yahoo')
 VALID_SCORING_TYPES = ('half', 'full')
+DEFAULT_SCORING_TYPE = 'half'
 NAME_REPLACEMENTS = {
     ' jr.': '',
     ' jr': '',
@@ -35,8 +38,10 @@ def validate_league(league):
     if not (isinstance(league_id, (int, str)) and str(league_id).isdigit()):
         errors.append(f'league_id must be a number, got {league_id!r}')
 
+    # scoring_type and league_name are optional - when omitted they are pulled from
+    # the league's source system (see fetch_league_metadata) or defaulted.
     scoring_type = league.get('scoring_type')
-    if scoring_type not in VALID_SCORING_TYPES:
+    if scoring_type is not None and scoring_type not in VALID_SCORING_TYPES:
         errors.append(f'scoring_type must be one of {VALID_SCORING_TYPES}, got {scoring_type!r}')
 
     team_name = league.get('team_name')
@@ -44,6 +49,83 @@ def validate_league(league):
         errors.append('team_name is required')
 
     return errors
+
+
+def _rec_points_to_scoring_type(rec_points):
+    """Map a per-reception point value from a source system to our half/full scoring_type."""
+    if rec_points is None:
+        return None
+    return 'full' if rec_points >= 1 else 'half'
+
+
+def _fetch_espn_league_metadata(league_id):
+    """Look up scoring_type and league_name from the ESPN API for a given league."""
+    try:
+        from espn_api.football import League
+
+        from fantasy_ranks.espn_rosters import DEFAULT_YEAR, ESPN_S2, ESPN_SWID
+    except ImportError:
+        return {}
+
+    try:
+        league = League(league_id=int(league_id), year=DEFAULT_YEAR, swid=ESPN_SWID, espn_s2=ESPN_S2)
+    except Exception:  # noqa: BLE001 - espn_api raises assorted custom exceptions we must swallow
+        return {}
+
+    metadata = {}
+    league_name = getattr(league.settings, 'name', None)
+    if league_name:
+        metadata['league_name'] = league_name
+
+    rec_points = next(
+        (item.get('points') for item in getattr(league.settings, 'scoring_format', []) if item.get('abbr') == 'REC'),
+        None,
+    )
+    scoring_type = _rec_points_to_scoring_type(rec_points)
+    if scoring_type:
+        metadata['scoring_type'] = scoring_type
+
+    return metadata
+
+
+def _fetch_sleeper_league_metadata(league_id):
+    """Look up scoring_type and league_name from the Sleeper API for a given league."""
+    try:
+        resp = requests.get(f'https://api.sleeper.app/v1/league/{league_id}', timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+    except (requests.RequestException, ValueError):
+        return {}
+
+    if not isinstance(data, dict):
+        return {}
+
+    metadata = {}
+    league_name = data.get('name')
+    if league_name:
+        metadata['league_name'] = league_name
+
+    rec_points = (data.get('scoring_settings') or {}).get('rec')
+    scoring_type = _rec_points_to_scoring_type(rec_points)
+    if scoring_type:
+        metadata['scoring_type'] = scoring_type
+
+    return metadata
+
+
+def fetch_league_metadata(platform, league_id):
+    """Fetch scoring_type/league_name from a league's source system, when available.
+
+    Returns a dict that may contain 'scoring_type' and/or 'league_name' keys.
+    Network, auth, or parsing failures are swallowed - callers should fall back
+    to config-provided values or defaults. Yahoo! rosters are maintained
+    manually, so no source system lookup is available for that platform.
+    """
+    if platform == 'espn':
+        return _fetch_espn_league_metadata(league_id)
+    if platform == 'sleeper':
+        return _fetch_sleeper_league_metadata(league_id)
+    return {}
 
 
 def load_league_config(config_file=None):
@@ -64,6 +146,16 @@ def load_league_config(config_file=None):
     leagues = config.get('leagues', []) if isinstance(config, dict) else []
     valid_leagues = []
     for league in leagues:
+        # Pull missing scoring_type/league_name from the source system before validating.
+        if not league.get('scoring_type') or not league.get('league_name'):
+            metadata = fetch_league_metadata(league.get('platform'), league.get('league_id'))
+            for key in ('scoring_type', 'league_name'):
+                if not league.get(key) and metadata.get(key):
+                    league[key] = metadata[key]
+
+        if not league.get('scoring_type'):
+            league['scoring_type'] = DEFAULT_SCORING_TYPE
+
         errors = validate_league(league)
         if errors:
             name = league.get('team_name', league.get('league_name', 'Unknown'))

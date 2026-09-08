@@ -32,13 +32,15 @@ Create a file named `config.json` in the root. It must be valid JSON containing 
     {
       "platform": "", # required: "espn", "sleeper", or "yahoo"
       "league_id": "", # required: numeric, get this from the website URL
-      "scoring_type": "", # required: "half" or "full"
       "team_name": "", # required: your exact team name in the league
-      "league_name": "" # optional, but will help differentiate leagues in output
+      "scoring_type": "", # optional: "half" or "full" - auto-detected from ESPN/Sleeper if omitted, defaults to "half"
+      "league_name": "" # optional - auto-detected from ESPN/Sleeper if omitted, helps differentiate leagues in output
     }
   ]
 }
 ```
+
+For ESPN and Sleeper leagues, `scoring_type` and `league_name` are pulled automatically from the league's source system if not provided in `config.json`. Yahoo! rosters are maintained manually, so those two fields must be set explicitly for Yahoo! leagues (they default to `"half"` and blank otherwise).
 
 Create a `.env` file in the root:
 
