@@ -1,9 +1,11 @@
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 
 from fantasy_ranks.shared_functions import (
+    fetch_league_metadata,
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -66,7 +68,16 @@ def test_get_all_owned_players():
 
 def test_load_league_config_success(tmp_path):
     config_data = {
-        'leagues': [{'league_id': 12345, 'platform': 'espn', 'scoring_type': 'half', 'team_name': 'My Team'}]
+        'leagues': [
+            {
+                'league_id': 12345,
+                'platform': 'espn',
+                'scoring_type': 'half',
+                'team_name': 'My Team',
+                'league_name': 'My League',
+                'lineup_slots': {'QB': 1, 'RB': 2, 'WR': 2, 'TE': 1, 'FLEX': 1, 'D/ST': 1, 'K': 1},
+            }
+        ]
     }
     config_file = tmp_path / 'config.json'
     config_file.write_text(json.dumps(config_data), encoding='utf-8')
@@ -135,6 +146,16 @@ def test_validate_league_invalid_scoring_type():
     assert any('scoring_type' in error for error in errors)
 
 
+def test_validate_league_missing_scoring_type_is_valid():
+    league = {'platform': 'espn', 'league_id': '12345', 'team_name': 'My Team'}
+    assert validate_league(league) == []
+
+
+def test_validate_league_missing_league_name_is_valid():
+    league = {'platform': 'espn', 'league_id': '12345', 'scoring_type': 'half', 'team_name': 'My Team'}
+    assert validate_league(league) == []
+
+
 def test_validate_league_missing_team_name():
     league = {'platform': 'espn', 'league_id': '12345', 'scoring_type': 'half'}
     errors = validate_league(league)
@@ -156,11 +177,35 @@ def test_validate_league_multiple_errors():
 def test_load_league_config_skips_invalid_leagues(tmp_path):
     config_data = {
         'leagues': [
-            {'platform': 'espn', 'league_id': '12345', 'scoring_type': 'half', 'team_name': 'Valid Team'},
-            {'platform': 'yahoo', 'league_id': '999', 'scoring_type': 'full', 'team_name': 'Yahoo Team'},
-            {'platform': 'sleeper', 'league_id': 'abc', 'scoring_type': 'full', 'team_name': 'Bad League Id'},
-            {'platform': 'espn', 'league_id': '111', 'scoring_type': 'ppr', 'team_name': 'Bad Scoring Type'},
-            {'platform': 'espn', 'league_id': '222', 'scoring_type': 'half'},
+            {
+                'platform': 'espn',
+                'league_id': '12345',
+                'scoring_type': 'half',
+                'team_name': 'Valid Team',
+                'league_name': 'Valid League',
+            },
+            {
+                'platform': 'yahoo',
+                'league_id': '999',
+                'scoring_type': 'full',
+                'team_name': 'Yahoo Team',
+                'league_name': 'Yahoo League',
+            },
+            {
+                'platform': 'sleeper',
+                'league_id': 'abc',
+                'scoring_type': 'full',
+                'team_name': 'Bad League Id',
+                'league_name': 'Bad League',
+            },
+            {
+                'platform': 'espn',
+                'league_id': '111',
+                'scoring_type': 'ppr',
+                'team_name': 'Bad Scoring Type',
+                'league_name': 'Bad Scoring League',
+            },
+            {'platform': 'espn', 'league_id': '222', 'scoring_type': 'half', 'league_name': 'No Team Name League'},
         ]
     }
     config_file = tmp_path / 'config.json'
@@ -169,3 +214,101 @@ def test_load_league_config_skips_invalid_leagues(tmp_path):
     result = load_league_config(config_file)
     assert len(result['leagues']) == 2
     assert [league['team_name'] for league in result['leagues']] == ['Valid Team', 'Yahoo Team']
+
+
+def test_load_league_config_defaults_missing_scoring_type(tmp_path):
+    config_data = {'leagues': [{'platform': 'yahoo', 'league_id': '999', 'team_name': 'Yahoo Team'}]}
+    config_file = tmp_path / 'config.json'
+    config_file.write_text(json.dumps(config_data), encoding='utf-8')
+
+    result = load_league_config(config_file)
+    assert result['leagues'][0]['scoring_type'] == 'half'
+
+
+def test_load_league_config_pulls_metadata_from_source_system(tmp_path):
+    config_data = {'leagues': [{'platform': 'sleeper', 'league_id': '999', 'team_name': 'My Team'}]}
+    config_file = tmp_path / 'config.json'
+    config_file.write_text(json.dumps(config_data), encoding='utf-8')
+
+    with patch(
+        'fantasy_ranks.shared_functions.fetch_league_metadata',
+        return_value={'scoring_type': 'full', 'league_name': 'Sleeper League'},
+    ) as mock_fetch:
+        result = load_league_config(config_file)
+
+    mock_fetch.assert_called_once_with('sleeper', '999')
+    assert result['leagues'][0]['scoring_type'] == 'full'
+    assert result['leagues'][0]['league_name'] == 'Sleeper League'
+
+
+def test_load_league_config_does_not_override_provided_metadata(tmp_path):
+    config_data = {
+        'leagues': [
+            {
+                'platform': 'sleeper',
+                'league_id': '999',
+                'team_name': 'My Team',
+                'scoring_type': 'half',
+                'league_name': 'Custom Name',
+                'lineup_slots': {'QB': 2},
+            }
+        ]
+    }
+    config_file = tmp_path / 'config.json'
+    config_file.write_text(json.dumps(config_data), encoding='utf-8')
+
+    with patch('fantasy_ranks.shared_functions.fetch_league_metadata') as mock_fetch:
+        result = load_league_config(config_file)
+
+    mock_fetch.assert_not_called()
+    assert result['leagues'][0]['scoring_type'] == 'half'
+    assert result['leagues'][0]['league_name'] == 'Custom Name'
+    assert result['leagues'][0]['lineup_slots'] == {'QB': 2}
+
+
+def test_fetch_league_metadata_yahoo_returns_empty():
+    assert fetch_league_metadata('yahoo', '12345') == {}
+
+
+def test_fetch_sleeper_league_metadata_success():
+    mock_response = MagicMock()
+    mock_response.json.return_value = {
+        'name': 'My Sleeper League',
+        'scoring_settings': {'rec': 1.0},
+        'roster_positions': ['QB', 'RB', 'RB', 'WR', 'TE', 'FLEX'],
+    }
+    mock_response.raise_for_status.return_value = None
+
+    with patch('fantasy_ranks.shared_functions.requests.get', return_value=mock_response):
+        metadata = fetch_league_metadata('sleeper', '12345')
+
+    assert metadata == {
+        'league_name': 'My Sleeper League',
+        'scoring_type': 'full',
+        'lineup_slots': {
+            'QB': 1,
+            'RB': 2,
+            'WR': 1,
+            'TE': 1,
+            'FLEX': 1,
+            'SUPERFLEX': 0,
+            'D/ST': 0,
+            'K': 0,
+        },
+    }
+
+
+def test_fetch_sleeper_league_metadata_half_ppr():
+    mock_response = MagicMock()
+    mock_response.json.return_value = {'name': 'My Sleeper League', 'scoring_settings': {'rec': 0.5}}
+    mock_response.raise_for_status.return_value = None
+
+    with patch('fantasy_ranks.shared_functions.requests.get', return_value=mock_response):
+        metadata = fetch_league_metadata('sleeper', '12345')
+
+    assert metadata == {'league_name': 'My Sleeper League', 'scoring_type': 'half'}
+
+
+def test_fetch_sleeper_league_metadata_request_failure():
+    with patch('fantasy_ranks.shared_functions.requests.get', side_effect=requests.RequestException('boom')):
+        assert fetch_league_metadata('sleeper', '12345') == {}

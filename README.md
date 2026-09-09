@@ -32,11 +32,46 @@ Create a file named `config.json` in the root. It must be valid JSON containing 
     {
       "platform": "", # required: "espn", "sleeper", or "yahoo"
       "league_id": "", # required: numeric, get this from the website URL
-      "scoring_type": "", # required: "half" or "full"
       "team_name": "", # required: your exact team name in the league
-      "league_name": "" # optional, but will help differentiate leagues in output
+      "scoring_type": "", # optional: "half" or "full" - auto-detected from ESPN/Sleeper if omitted, defaults to "half"
+      "league_name": "", # optional - auto-detected from ESPN/Sleeper if omitted, helps differentiate leagues in output
+      "lineup_slots": {} # optional - auto-detected from ESPN/Sleeper if omitted, must be set manually for Yahoo! leagues
     }
   ]
+}
+```
+
+For ESPN and Sleeper leagues, `scoring_type`, `league_name`, and `lineup_slots` are pulled automatically from the league's source system if not provided in `config.json`. Yahoo! rosters are maintained manually, so those fields must be set explicitly for Yahoo! leagues (they default to `"half"`, blank, and a standard 1 QB/2 RB/2 WR/1 TE/1 FLEX/1 D-ST/1 K lineup otherwise).
+
+`lineup_slots` is what makes the weekly start/sit report concrete: it tells the report exactly how many starters your league needs at each position (e.g. a league starting 2 QBs will build a Starting Roster table with 2 QB rows instead of just one), so the recommendations match your league's real starting lineup instead of a generic default. You normally don't need to set this yourself - it's auto-detected from ESPN's roster settings or Sleeper's `roster_positions`.
+
+### Configuring `lineup_slots` for Yahoo! leagues
+
+Since Yahoo! has no public API, `lineup_slots` must be set manually in `config.json` for Yahoo! leagues (ESPN and Sleeper leagues auto-detect it and don't need this). The value is an object mapping each position to how many starters your league uses at that slot:
+
+| Key         | Meaning                                              |
+| ----------- | ----------------------------------------------------- |
+| `QB`        | Quarterback                                            |
+| `RB`        | Running back                                           |
+| `WR`        | Wide receiver                                          |
+| `TE`        | Tight end                                              |
+| `FLEX`      | RB/WR/TE flex (Yahoo!'s "W/R/T")                       |
+| `SUPERFLEX` | QB/RB/WR/TE superflex (Yahoo!'s "Q/W/R/T")             |
+| `D/ST`      | Team defense/special teams                             |
+| `K`         | Kicker                                                 |
+
+Omit a key (or set it to `0`) if your league doesn't start that position - the weekly report will still include a row for it noting it isn't part of your starting lineup, except for unused kicker and defense rows, which are hidden. For example, a Yahoo! league that starts 1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX ("W/R/T"), 1 SUPERFLEX ("Q/W/R/T"), 1 K, and 1 D/ST would use:
+
+```json
+"lineup_slots": {
+  "QB": 1,
+  "RB": 2,
+  "WR": 2,
+  "TE": 1,
+  "FLEX": 2,
+  "SUPERFLEX": 1,
+  "K": 1,
+  "D/ST": 1
 }
 ```
 
@@ -83,6 +118,12 @@ uv run fantasy-ranks
 ```
 
 This downloads the latest weekly rankings, pulls your rosters from ESPN and Sleeper, uses the manually maintained Yahoo! roster files, and writes the resulting analysis to `lineups/start-sit.md`.
+
+For each team, the report includes:
+
+- A **Starting Roster** table listing each starting slot (based on `lineup_slots`), the current starter and their position rank, the best available free agent at that slot and their rank, and an evaluation (`Optimal`, `+N Ranks Better`, `Unranked`, etc.). Positions configured with 0 starters still get a row noting they aren't part of your starting lineup, and a `SUPERFLEX` row/section appears only for leagues that use one.
+- A **Bench** table listing the rest of the team's rostered players (those not filling a starting, FLEX, or SUPERFLEX slot) and their current position rank.
+- A **Top 5 Available Players by Position** section listing the best free agents at QB, RB, WR, TE, FLEX, D-ST, and K (plus SUPERFLEX for leagues that use it).
 
 ## Importing Yahoo! rosters
 
