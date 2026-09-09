@@ -19,7 +19,6 @@ from fantasy_ranks.shared_functions import (
     normalize_name,
 )
 
-# Global variable to store markdown content
 markdown_content = []
 
 BASE_DIR = Path(__file__).parent
@@ -358,7 +357,7 @@ def _print_starting_roster_table(players_by_position, available_by_position, ran
     ordinal_ranks = {position: _compute_position_ordinal_ranks(rankings, position) for position in BASE_SLOT_POSITIONS}
 
     safe_print('| Slot | Starter | Current Rank | Best Available Free Agent | FA Rank | Evaluation |')
-    safe_print('|------|---------|---------------|----------------------------|---------|------------|')
+    safe_print('|------|---------|--------------|---------------------------|---------|------------|')
 
     flex_candidates = []  # Leftover RB/WR/TE team players not needed for their own position's slots
     superflex_pool = []  # Leftover QB players, plus FLEX-eligible players not used by FLEX slots
@@ -414,7 +413,7 @@ def _print_starting_roster_table(players_by_position, available_by_position, ran
 
         for idx in range(flex_slots):
             entry = flex_candidates[idx] if idx < len(flex_candidates) else None
-            _print_pooled_slot_row('FLEX', entry, best_flex_fa)
+            _print_pooled_slot_row('FLEX', entry, best_flex_fa, ordinal_ranks)
             if entry is not None:
                 starter_keys.add((entry['position'], entry['name']))
 
@@ -433,7 +432,7 @@ def _print_starting_roster_table(players_by_position, available_by_position, ran
 
         for idx in range(superflex_slots):
             entry = superflex_pool[idx] if idx < len(superflex_pool) else None
-            _print_pooled_slot_row('SUPERFLEX', entry, best_superflex_fa)
+            _print_pooled_slot_row('SUPERFLEX', entry, best_superflex_fa, ordinal_ranks)
             if entry is not None:
                 starter_keys.add((entry['position'], entry['name']))
 
@@ -480,11 +479,26 @@ def _print_slot_row(position, entry, ordinal_map, best_fa, fa_ordinal):
     safe_print(f'| {position} | {starter_cell} | {current_rank_cell} | {fa_cell} | {fa_rank_cell} | {evaluation} |')
 
 
-def _print_pooled_slot_row(slot_label, entry, best_fa):
+def _format_pooled_rank(slot_label, ranking_info, ordinal_ranks):
+    """Format a pooled-slot rank with the player's specific position rank."""
+    if not ranking_info:
+        return '—'
+
+    position = ranking_info['position']
+    player_name = ranking_info.get('player_name', ranking_info.get('name'))
+    ordinal = ordinal_ranks.get(position, {}).get(player_name)
+    position_rank = _format_rank(position, ordinal) if ordinal else None
+    if slot_label == 'FLEX':
+        flex_rank = f'FLEX#{ranking_info["rank"]}'
+        return f'{position_rank} / {flex_rank}' if position_rank else flex_rank
+    return f'#{ranking_info["rank"]}'
+
+
+def _print_pooled_slot_row(slot_label, entry, best_fa, ordinal_ranks):
     """Print a single starting-lineup row for a pooled multi-position slot (FLEX or SUPERFLEX).
 
-    Pooled slots use each player's raw ranking (already comparable across the eligible
-    positions) instead of a per-position ordinal, shown as '#N'.
+    FLEX slots show both each player's position-specific rank and combined FLEX rank.
+    SUPERFLEX slots continue to show the raw combined rank as '#N'.
     """
     if entry is None:
         starter_cell = '— (Empty Slot)'
@@ -496,14 +510,14 @@ def _print_pooled_slot_row(slot_label, entry, best_fa):
         pos_suffix = f' ({starter_position})' if starter_position else ''
         starter_cell = f'{entry["name"]}{pos_suffix}'
         starter_rank = ranking_info['rank'] if ranking_info else None
-        current_rank_cell = f'#{starter_rank}' if starter_rank is not None else '—'
+        current_rank_cell = _format_pooled_rank(slot_label, ranking_info, ordinal_ranks)
         fa_rank = best_fa['rank'] if best_fa else None
         evaluation = _evaluate_slot(starter_rank, fa_rank)
 
     if best_fa:
         fa_position_label = _position_label(best_fa['position'])
         fa_cell = f'{best_fa["name"]} ({fa_position_label} - {best_fa["proTeam"]})'
-        fa_rank_cell = f'#{best_fa["rank"]}'
+        fa_rank_cell = _format_pooled_rank(slot_label, best_fa, ordinal_ranks)
     else:
         fa_cell = '—'
         fa_rank_cell = '—'
@@ -529,8 +543,12 @@ def _print_bench_table(players_by_position, rankings, starter_keys):
 
             ranking_info = find_player_ranking(player['name'], position, rankings)
             ordinal = ordinal_map.get(player['name']) if ranking_info else None
-            rank_label = _format_rank(position, ordinal) if ordinal else 'Unranked'
-            sort_rank = ordinal if ordinal is not None else float('inf')
+            if ranking_info and position in FLEX_ELIGIBLE_POSITIONS:
+                rank_label = _format_pooled_rank('FLEX', ranking_info, ordinal_ranks)
+                sort_rank = ranking_info['rank']
+            else:
+                rank_label = _format_rank(position, ordinal) if ordinal else 'Unranked'
+                sort_rank = ordinal if ordinal is not None else float('inf')
             rows.append((sort_rank, f'{player["name"]} ({_position_label(position)})', rank_label))
 
     if not rows:
@@ -572,10 +590,15 @@ def _print_top_available_lists(available_by_position, rankings, lineup_slots):
                 entries.extend(available_by_position.get(pool_position, []))
             entries.sort(key=lambda p: p['rank'])
             top_entries = entries[:TOP_N_AVAILABLE]
-            rows = [
-                (f'{p["name"]} ({_position_label(p["position"])} - {p["proTeam"]})', f'#{p["rank"]}')
-                for p in top_entries
-            ]
+            rows = []
+            for p in top_entries:
+                rank_info = {
+                    'position': p['position'],
+                    'player_name': p['name'],
+                    'rank': p['rank'],
+                }
+                rank_label = _format_pooled_rank(position, rank_info, ordinal_ranks)
+                rows.append((f'{p["name"]} ({_position_label(p["position"])} - {p["proTeam"]})', rank_label))
         else:
             entries = sorted(available_by_position.get(position, []), key=lambda p: p['rank'])
             top_entries = entries[:TOP_N_AVAILABLE]
@@ -645,6 +668,7 @@ def output_rankings(
         file_prefix (str): Optional prefix for the league files (e.g., "LeagueOfDreams")
         league_name (str): Name of the league for display
         custom_owned_path (str): Optional path to a custom JSON file with owned players
+        rankings (dict): Optional pre-loaded player rankings to use for analysis
         lineup_slots (dict): Starting lineup slot counts pulled from the league's source system
             (e.g. {'QB': 1, 'RB': 2, 'WR': 2, 'TE': 1, 'FLEX': 1, 'D/ST': 1, 'K': 1}). Falls back
             to DEFAULT_LINEUP_SLOTS when not provided.

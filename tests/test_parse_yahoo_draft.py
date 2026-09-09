@@ -37,9 +37,7 @@ def test_parse_yahoo_draft_writes_players_by_team(tmp_path, monkeypatch):
 def test_parse_yahoo_draft_ignores_content_without_valid_picks(tmp_path, monkeypatch):
     rosters_dir = tmp_path / 'rosters'
     rosters_dir.mkdir()
-    (rosters_dir / 'yahoo_456.txt').write_text(
-        'Draft Results\nTeam Alpha\nNot a draft pick\n', encoding='utf-8'
-    )
+    (rosters_dir / 'yahoo_456.txt').write_text('Draft Results\nTeam Alpha\nNot a draft pick\n', encoding='utf-8')
     monkeypatch.chdir(tmp_path)
 
     parse_yahoo_draft('456')
