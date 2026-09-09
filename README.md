@@ -257,7 +257,7 @@ uv run pytest
 
 ## Sample Output - start-sit.md
 
-### League of Dreams The Sheriff — Starting Roster
+### My League My Team Name — Starting Roster
 
 | Slot | Starter                  | Current Rank   | Best Available Free Agent            | FA Rank        | Evaluation          |
 | ---- | ------------------------ | -------------- | ------------------------------------ | -------------- | ------------------- |
@@ -338,13 +338,13 @@ uv run pytest
 
 #### Defense (D/ST)
 
-| Player                                | Rank  |
-| ------------------------------------- | ----- |
-| Pittsburgh Steelers D/ST (DST - PIT)  | DST3  |
-| Dallas Cowboys D/ST (DST - DAL)       | DST8  |
-| Minnesotaikings D/St D/ST (DST - MIN) | DST10 |
-| Baltimore Ravens D/ST (DST - BAL)     | DST11 |
-| Buffalo Bills D/ST (DST - BUF)        | DST12 |
+| Player                                  | Rank  |
+| --------------------------------------- | ----- |
+| Pittsburgh Steelers D/ST (DST - PIT)    | DST3  |
+| Dallas Cowboys D/ST (DST - DAL)         | DST8  |
+| Minnesota Vikings D/St D/ST (DST - MIN) | DST10 |
+| Baltimore Ravens D/ST (DST - BAL)       | DST11 |
+| Buffalo Bills D/ST (DST - BUF)          | DST12 |
 
 #### Kickers (K)
 
@@ -360,7 +360,7 @@ uv run pytest
 
 ### Top 10 Available Players + Bottom 10 Team Players
 
-## My League The Sheriff
+## My League My Team Name
 
 ### 🎯 Top 10 Available Players
 
@@ -377,7 +377,7 @@ uv run pytest
 | 114  | Juwan Johnson      | TE       | NO   |
 | 115  | Jonah Coleman      | RB       | DEN  |
 
-### 📉 Bottom 10 - The Sheriff
+### 📉 Bottom 10 - My Team Name
 
 | Rank | Player          | Position | Team |
 | ---- | --------------- | -------- | ---- |
