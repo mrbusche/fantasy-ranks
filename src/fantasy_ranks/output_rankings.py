@@ -112,6 +112,8 @@ def organize_by_position(players, league_type='espn'):
     for player in players:
         # Handle different position field names based on league type
         position = player.get('position', 'Unknown')
+        if position in ('DEF', 'DST'):
+            position = 'D/ST'
 
         # Handle different team field names based on league type
         if league_type == 'sleeper':
@@ -489,7 +491,7 @@ def _format_pooled_rank(slot_label, ranking_info, ordinal_ranks):
     ordinal = ordinal_ranks.get(position, {}).get(player_name)
     position_rank = _format_rank(position, ordinal) if ordinal else None
     if slot_label == 'FLEX':
-        flex_rank = f'FLEX#{ranking_info["rank"]}'
+        flex_rank = f'FLEX {ranking_info["rank"]}'
         return f'{position_rank} / {flex_rank}' if position_rank else flex_rank
     return f'#{ranking_info["rank"]}'
 
@@ -542,7 +544,8 @@ def _print_bench_table(players_by_position, rankings, starter_keys):
                 continue
 
             ranking_info = find_player_ranking(player['name'], position, rankings)
-            ordinal = ordinal_map.get(player['name']) if ranking_info else None
+            ranked_player_name = ranking_info['player_name'] if ranking_info else None
+            ordinal = ordinal_map.get(ranked_player_name) if ranked_player_name else None
             if ranking_info and position in FLEX_ELIGIBLE_POSITIONS:
                 rank_label = _format_pooled_rank('FLEX', ranking_info, ordinal_ranks)
                 sort_rank = ranking_info['rank']

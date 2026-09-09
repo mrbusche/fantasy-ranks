@@ -85,6 +85,10 @@ def test_organize_by_position():
     organized_sleeper = organize_by_position(sleeper_players, league_type='sleeper')
     assert organized_sleeper['QB'][0]['proTeam'] == 'BUF'
 
+    yahoo_players = [{'name': 'Chargers', 'position': 'DEF'}]
+    organized_yahoo = organize_by_position(yahoo_players, league_type='yahoo')
+    assert len(organized_yahoo['D/ST']) == 1
+
 
 def test_load_rankings(tmp_path):
     qb_csv = tmp_path / 'qb.csv'
@@ -250,7 +254,7 @@ def test_print_combined_position_rankings_free_agent_better_and_flex():
     )
     output_text = '\n'.join(output_rankings_mod.markdown_content)
     assert '| RB | Saquon Barkley (RB) | RB1 | — | — | No Free Agents Available |' in output_text
-    assert '| FLEX | Bench RB (RB) | RB2 / FLEX#5 | — | — | No Free Agents Available |' in output_text
+    assert '| FLEX | Bench RB (RB) | RB2 / FLEX 5 | — | — | No Free Agents Available |' in output_text
 
 
 def test_print_combined_position_rankings_unranked_and_empty_slot():
@@ -389,10 +393,43 @@ def test_print_combined_position_rankings_shows_bench():
     output_text = '\n'.join(output_rankings_mod.markdown_content)
     assert '### Bench' in output_text
     assert '| Backup QB (QB) | QB2 |' in output_text
-    assert '| Backup RB (RB) | RB2 / FLEX#12 |' in output_text
+    assert '| Backup RB (RB) | RB2 / FLEX 12 |' in output_text
     bench_section = output_text.split('### Bench')[1].split('### Top')[0]
     assert bench_section.index('Flex Rank 59') < bench_section.index('Flex Rank 102')
     assert 'Starter QB (QB)' not in output_text.split('### Bench')[1].split('### Top')[0]
+
+
+def test_print_combined_position_rankings_matches_bench_name_suffix():
+    output_rankings_mod.markdown_content = []
+    players_by_position = {
+        'QB': [{'name': 'Patrick Mahomes', 'proTeam': 'KC', 'injured': False, 'totalPoints': 5.0}],
+    }
+    rankings = {
+        'QB': {
+            'Patrick Mahomes II': {
+                'rank': 21,
+                'team': 'KC',
+                'position': 'QB',
+                'player_name': 'Patrick Mahomes II',
+            }
+        },
+        'RB': {},
+        'WR': {},
+        'TE': {},
+        'D/ST': {},
+        'K': {},
+    }
+
+    print_combined_position_rankings(
+        players_by_position,
+        {'Patrick Mahomes'},
+        rankings,
+        'My Team',
+        'My League',
+        lineup_slots={'QB': 0, 'FLEX': 0},
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    assert '| Patrick Mahomes (QB) | QB1 |' in output_text
 
 
 def test_print_combined_position_rankings_empty_bench_message():
