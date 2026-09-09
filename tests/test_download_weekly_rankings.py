@@ -135,13 +135,18 @@ def test_download_file_network_error(tmp_path):
     assert not os.path.exists(output_file)
 
 
-def test_main_raises_when_env_not_set(monkeypatch):
+def test_main_skips_download_and_notifies_when_env_not_set(monkeypatch, capsys):
     monkeypatch.delenv('RANKINGS_URL', raising=False)
     with (
         patch('fantasy_ranks.download_weekly_rankings.load_dotenv'),
-        pytest.raises(RuntimeError, match='RANKINGS_URL is not set'),
+        patch('fantasy_ranks.download_weekly_rankings.download_file') as mock_download,
+        patch('os.makedirs'),
     ):
         main()
+        mock_download.assert_not_called()
+
+    captured = capsys.readouterr()
+    assert 'No RANKINGS_URL configured' in captured.out
 
 
 def test_main_success(monkeypatch, tmp_path):

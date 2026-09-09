@@ -88,6 +88,8 @@ ESPN_S2=your-espn-s2-value
 - `RANKINGS_URL`: if you found this website you can figure out how your favorite rankings site exposes their rankings, you will want this exported as csv.
 - `ESPN_SWID` / `ESPN_S2`: only needed if any configured league is a private ESPN league. Log in to ESPN in your browser, open dev tools, and copy the `espn_s2` and `SWID` cookie values (`SWID` includes the surrounding curly braces).
 
+If `RANKINGS_URL` is not set, the download step will not attempt to refresh files in `rankings/`. Instead, it prints how old each existing file is so you know whether they need to be replaced manually.
+
 ## Adding your own rankings
 
 You can use rankings from any source as long as you save them as CSV files in the `rankings/` directory. The weekly lineup report looks for these exact file names:

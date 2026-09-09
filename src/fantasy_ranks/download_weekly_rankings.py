@@ -139,6 +139,27 @@ def download_file(url, filename):
     print('-' * 30)
 
 
+def notify_existing_file_ages(rankings_dir, filenames):
+    """Prints how old each existing rankings file is, since no RANKINGS_URL is configured
+    to refresh them.
+    """
+    print('No RANKINGS_URL configured - existing rankings files will not be refreshed.\n')
+    current_time = datetime.now(UTC)
+
+    for filename in filenames:
+        filepath = os.path.join(rankings_dir, filename)
+        if not os.path.exists(filepath):
+            print(f'⚠️  {filename} not found in {rankings_dir}/')
+            continue
+
+        file_mod_time = datetime.fromtimestamp(os.path.getmtime(filepath), tz=UTC)
+        age = current_time - file_mod_time
+        print(
+            f'ℹ️  {filename} was last modified {file_mod_time.strftime("%Y-%m-%d %H:%M:%S")} UTC '
+            f'({age.days}d {age.seconds // 3600}h ago)',
+        )
+
+
 def main():
     rankings_dir = 'rankings'
     os.makedirs(rankings_dir, exist_ok=True)
@@ -153,8 +174,16 @@ def main():
     # A list of tuples, where each tuple contains:
     # (name_from_prompt, url_to_download)
     url_template = os.environ.get('RANKINGS_URL')
+    known_filenames = [
+        'half_flex.csv',
+        'ppr_flex.csv',
+        'qb.csv',
+        'dst.csv',
+        'kicker.csv',
+    ]
     if not url_template:
-        raise RuntimeError('RANKINGS_URL is not set. Add it to a .env file.')
+        notify_existing_file_ages(rankings_dir, known_filenames)
+        return
     rankings_url = url_template.format(week=current_week)
     files_to_download = [
         (
