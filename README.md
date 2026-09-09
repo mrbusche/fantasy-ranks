@@ -271,18 +271,18 @@ uv run pytest
 | TE   | Tucker Kraft (TE)        | TE5            | Juwan Johnson (TE - NO)              | TE10           | Optimal             |
 | K    | Jason Myers (K)          | K7             | Evan McPherson (K - CIN)             | K4             | +3 Ranks Better     |
 | D/ST | — (Empty Slot)           | —              | Pittsburgh Steelers D/ST (DST - PIT) | DST3           | Fill via Free Agent |
-| FLEX | Ashton Jeanty (RB)       | RB17 / FLEX#29 | Wan'Dale Robinson (WR - TEN)         | WR40 / FLEX#80 | Optimal             |
-| FLEX | Bhayshul Tuten (RB)      | RB27 / FLEX#54 | Wan'Dale Robinson (WR - TEN)         | WR40 / FLEX#80 | Optimal             |
+| FLEX | Ashton Jeanty (RB)       | RB17 / FLEX 29 | Wan'Dale Robinson (WR - TEN)         | WR40 / FLEX 80 | Optimal             |
+| FLEX | Bhayshul Tuten (RB)      | RB27 / FLEX 54 | Wan'Dale Robinson (WR - TEN)         | WR40 / FLEX 80 | Optimal             |
 
 ### Bench
 
 | Player              | Current Rank    |
 | ------------------- | --------------- |
-| Terry McLaurin (WR) | WR27 / FLEX#57  |
-| MarShawn Lloyd (RB) | RB28 / FLEX#61  |
-| KC Concepcion (WR)  | WR47 / FLEX#99  |
-| Makai Lemon (WR)    | WR56 / FLEX#116 |
-| Ja'Kobi Lane (WR)   | WR75 / FLEX#151 |
+| Terry McLaurin (WR) | WR27 / FLEX 57  |
+| MarShawn Lloyd (RB) | RB28 / FLEX 61  |
+| KC Concepcion (WR)  | WR47 / FLEX 99  |
+| Makai Lemon (WR)    | WR56 / FLEX 116 |
+| Ja'Kobi Lane (WR)   | WR75 / FLEX 151 |
 
 ### Top 5 Available Players by Position
 
@@ -330,11 +330,11 @@ uv run pytest
 
 | Player                       | Rank           |
 | ---------------------------- | -------------- |
-| Wan'Dale Robinson (WR - TEN) | WR40 / FLEX#80 |
-| Juwan Johnson (TE - NO)      | TE10 / FLEX#85 |
-| Jalen Coker (WR - CAR)       | WR44 / FLEX#89 |
-| Jakobi Meyers (WR - JAC)     | WR45 / FLEX#90 |
-| Aaron Jones Sr. (RB - MIN)   | RB37 / FLEX#94 |
+| Wan'Dale Robinson (WR - TEN) | WR40 / FLEX 80 |
+| Juwan Johnson (TE - NO)      | TE10 / FLEX 85 |
+| Jalen Coker (WR - CAR)       | WR44 / FLEX 89 |
+| Jakobi Meyers (WR - JAC)     | WR45 / FLEX 90 |
+| Aaron Jones Sr. (RB - MIN)   | RB37 / FLEX 94 |
 
 #### Defense (D/ST)
 
