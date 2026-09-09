@@ -1,7 +1,7 @@
 [project]
 name = "fantasy-ranks"
 version = "0.1.0"
-description = "Add your description here"
+description = "Generate weekly start/sit recommendations and rest-of-season analysis for fantasy football leagues"
 readme = "README.md"
 authors = [{ name = "Matt Busche", email = "mrbusche@gmail.com" }]
 requires-python = ">=3.13"

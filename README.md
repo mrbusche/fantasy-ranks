@@ -24,41 +24,52 @@ Generate lineups for your Sleeper and ESPN leagues
 
 ## Setup
 
-Create a file named `config.json` in the root. It must be valid JSON containing a `leagues` array; separate multiple leagues with a comma. Each league is validated when loaded, and invalid entries are skipped with a warning, so every field below must match its expected format:
+Create a file named `config.json` in the root. It must be valid JSON containing a `leagues` array; separate multiple leagues with a comma. Each league is validated when loaded, and invalid entries are skipped with a warning.
 
 ```json
 {
   "leagues": [
     {
-      "platform": "", # required: "espn", "sleeper", or "yahoo"
-      "league_id": "", # required: numeric, get this from the website URL
-      "team_name": "", # required: your exact team name in the league
-      "scoring_type": "", # optional: "half" or "full" - auto-detected from ESPN/Sleeper if omitted, defaults to "half"
-      "league_name": "", # optional - auto-detected from ESPN/Sleeper if omitted, helps differentiate leagues in output
-      "lineup_slots": {} # optional - auto-detected from ESPN/Sleeper if omitted, must be set manually for Yahoo! leagues
+      "platform": "espn",
+      "league_id": "123456",
+      "team_name": "My Team",
+      "scoring_type": "half",
+      "league_name": "My League",
+      "lineup_slots": {}
     }
   ]
 }
 ```
 
-For ESPN and Sleeper leagues, `scoring_type`, `league_name`, and `lineup_slots` are pulled automatically from the league's source system if not provided in `config.json`. Yahoo! rosters are maintained manually, so those fields must be set explicitly for Yahoo! leagues (they default to `"half"`, blank, and a standard 1 QB/2 RB/2 WR/1 TE/1 FLEX/1 D-ST/1 K lineup otherwise).
+**Required fields:**
 
-`lineup_slots` is what makes the weekly start/sit report concrete: it tells the report exactly how many starters your league needs at each position (e.g. a league starting 2 QBs will build a Starting Roster table with 2 QB rows instead of just one), so the recommendations match your league's real starting lineup instead of a generic default. You normally don't need to set this yourself - it's auto-detected from ESPN's roster settings or Sleeper's `roster_positions`.
+- `platform`: One of `"espn"`, `"sleeper"`, or `"yahoo"`
+- `league_id`: String containing your league's ID (found in the league's website URL)
+- `team_name`: Your exact team name as it appears in the league
+
+**Optional fields:**
+
+- `scoring_type`: Either `"half"` (half-PPR) or `"full"` (full-PPR). For ESPN and Sleeper leagues, this is auto-detected from the league settings if omitted; for Yahoo! leagues, defaults to `"half"` if not specified.
+- `league_name`: Display name for the league in reports. Auto-detected from ESPN and Sleeper if omitted.
+- `lineup_slots`: Object mapping positions to starter counts (see below). Auto-detected from ESPN/Sleeper settings if omitted; required for Yahoo! leagues.
+
+**Auto-Detection Details:**
+For ESPN and Sleeper leagues, if you don't specify `scoring_type`, `league_name`, or `lineup_slots`, they are automatically pulled from the league's API. This means you can often provide just the three required fields, and everything else will be filled in. Yahoo! has no public API, so these fields must be set explicitly for Yahoo! leagues.
 
 ### Configuring `lineup_slots` for Yahoo! leagues
 
 Since Yahoo! has no public API, `lineup_slots` must be set manually in `config.json` for Yahoo! leagues (ESPN and Sleeper leagues auto-detect it and don't need this). The value is an object mapping each position to how many starters your league uses at that slot:
 
-| Key         | Meaning                                              |
-| ----------- | ----------------------------------------------------- |
-| `QB`        | Quarterback                                            |
-| `RB`        | Running back                                           |
-| `WR`        | Wide receiver                                          |
-| `TE`        | Tight end                                              |
-| `FLEX`      | RB/WR/TE flex (Yahoo!'s "W/R/T")                       |
-| `SUPERFLEX` | QB/RB/WR/TE superflex (Yahoo!'s "Q/W/R/T")             |
-| `D/ST`      | Team defense/special teams                             |
-| `K`         | Kicker                                                 |
+| Key         | Meaning                                    |
+| ----------- | ------------------------------------------ |
+| `QB`        | Quarterback                                |
+| `RB`        | Running back                               |
+| `WR`        | Wide receiver                              |
+| `TE`        | Tight end                                  |
+| `FLEX`      | RB/WR/TE flex (Yahoo!'s "W/R/T")           |
+| `SUPERFLEX` | QB/RB/WR/TE superflex (Yahoo!'s "Q/W/R/T") |
+| `D/ST`      | Team defense/special teams                 |
+| `K`         | Kicker                                     |
 
 Omit a key (or set it to `0`) if your league doesn't start that position - the weekly report will still include a row for it noting it isn't part of your starting lineup, except for unused kicker and defense rows, which are hidden. For example, a Yahoo! league that starts 1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX ("W/R/T"), 1 SUPERFLEX ("Q/W/R/T"), 1 K, and 1 D/ST would use:
 
@@ -79,14 +90,16 @@ Create a `.env` file in the root:
 
 ```text
 RANKINGS_URL=https://some-website.com?week={week}&export=csv
+REST_OF_SEASON_RANKINGS_PATTERN=Your Pattern*.csv
 
 # Only required for private ESPN leagues
 ESPN_SWID={your-espn-swid}
 ESPN_S2=your-espn-s2-value
 ```
 
-- `RANKINGS_URL`: if you found this website you can figure out how your favorite rankings site exposes their rankings, you will want this exported as csv.
-- `ESPN_SWID` / `ESPN_S2`: only needed if any configured league is a private ESPN league. Log in to ESPN in your browser, open dev tools, and copy the `espn_s2` and `SWID` cookie values (`SWID` includes the surrounding curly braces).
+- `RANKINGS_URL`: Set this to your rankings source that supports weekly exports as CSV. The `{week}` placeholder is replaced with the current week number.
+- `REST_OF_SEASON_RANKINGS_PATTERN`: Optional glob pattern for finding rest-of-season rankings files in your Downloads folder. If set, the pipeline copies matching files to `rankings/rest-of-season.csv`. Omit if you prefer to manually maintain this file.
+- `ESPN_SWID` / `ESPN_S2`: Only needed if any configured league is a private ESPN league. Log in to ESPN in your browser, open dev tools, and copy the `espn_s2` and `SWID` cookie values (`SWID` includes the surrounding curly braces).
 
 If `RANKINGS_URL` is not set, the download step will not attempt to refresh files in `rankings/`. Instead, it prints how old each existing file is so you know whether they need to be replaced manually.
 
@@ -111,7 +124,11 @@ Rank,Player Name,Team,Position
 
 The full-PPR league setting uses `ppr_flex.csv`; the half-PPR setting uses `half_flex.csv`. The position values in the flex file should be `RB`, `WR`, or `TE`, and the defense file should use `DST` for its position.
 
-The rest-of-season report uses a separate file named `rest-of-season.csv`. It must have the header `Player,Position,Team,Rank`. The normal pipeline copies the newest matching rankings export from your Downloads folder to this file. To keep a manually created file, place it in `rankings/rest-of-season.csv` and run the relevant report modules individually instead of the full `uv run fantasy-ranks` command.
+The rest-of-season report uses a separate file named `rest-of-season.csv`. It must have the header `Player,Position,Team,Rank`.
+
+**Automatic updates:** If you set `REST_OF_SEASON_RANKINGS_PATTERN` in `.env`, the pipeline automatically copies matching files from your Downloads folder to `rankings/rest-of-season.csv`.
+
+**Manual maintenance:** If you prefer to maintain this file manually, place it in `rankings/rest-of-season.csv` and either set `REST_OF_SEASON_RANKINGS_PATTERN` to an empty string or skip the full `uv run fantasy-ranks` command and run the relevant modules individually.
 
 ## Generating lineups
 
@@ -119,7 +136,19 @@ The rest-of-season report uses a separate file named `rest-of-season.csv`. It mu
 uv run fantasy-ranks
 ```
 
-This downloads the latest weekly rankings, pulls your rosters from ESPN and Sleeper, uses the manually maintained Yahoo! roster files, and writes the resulting analysis to `lineups/start-sit.md`.
+This runs the full pipeline:
+
+1. Downloads the latest weekly rankings (if `RANKINGS_URL` is set)
+2. Pulls rosters from ESPN and Sleeper leagues
+3. Loads manually maintained Yahoo! roster files
+4. Generates a weekly start/sit report: `lineups/start-sit.md`
+5. Refreshes rest-of-season rankings (if `REST_OF_SEASON_RANKINGS_PATTERN` is set)
+6. Identifies top available players by position
+
+**Output Files:**
+
+- **`lineups/start-sit.md`** — Weekly analysis with starting roster recommendations, bench breakdowns, and top 5 available players by position for each league.
+- **`lineups/ros-analysis.md`** — Rest-of-season analysis showing top available players and bottom-ranked rostered players for each league.
 
 For each team, the report includes:
 
@@ -173,9 +202,57 @@ uv run python -m fantasy_ranks.reset_project
 uv run pytest
 ```
 
+## Troubleshooting
+
+### Rankings files missing or old
+
+- Check that `RANKINGS_URL` is set in `.env`
+- Verify the URL is still valid and returns CSV format
+- If you see "RANKINGS_URL not set" — the download step skips automatically; place CSV files manually in `rankings/` or update `.env`
+
+### Config validation warnings
+
+- Invalid league entries are skipped with a warning message printed to the console
+- Check your `config.json` for malformed JSON (tools like VSCode's JSON validator can help)
+- Verify all required fields (`platform`, `league_id`, `team_name`) are present and correctly formatted
+
+### ESPN/Sleeper API failures
+
+- If you see "401 Unauthorized" errors: your ESPN credentials (`ESPN_SWID` / `ESPN_S2`) may be expired; re-copy them from your browser
+- If public ESPN/Sleeper leagues fail: verify the `league_id` is correct and matches the league's public URL
+- Check your internet connection; the pipeline makes external API calls
+
+### Yahoo roster parsing issues
+
+- Make sure you've copied the **entire draft results page sort by team** or **transactions page** (Ctrl+A, Ctrl+C) before pasting into the file
+- Save the file to exactly `rosters/yahoo_{leagueId}.txt` or `rosters/yahoo_updates_{leagueId}.txt`
+- Run the parser command with the correct league ID matching your config
+
+### Missing output files
+
+- `start-sit.md` is created only if at least one league loads successfully
+- `ros-analysis.md` is created only if `rest-of-season.csv` exists and contains valid rankings
+- Check the console output for error messages indicating which step failed
+
 ## Project structure
 
-- `src/fantasy_ranks/` — the installable package: `cli.py` orchestrates the pipeline, and each module (`espn_rosters.py`, `sleeper_rosters.py`, `download_weekly_rankings.py`, `output_rankings.py`, `copy_newest_ros.py`, `find_top_available.py`, `reset_project.py`, `shared_functions.py`) can also be run standalone via `uv run python -m fantasy_ranks.<module>`.
+- `src/fantasy_ranks/` — the installable package with the following runnable modules:
+
+  | Module                        | Purpose                                                                                                                           |
+  | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+  | `cli.py`                      | Orchestrates the full pipeline (called by `uv run fantasy-ranks`)                                                                 |
+  | `download_weekly_rankings.py` | Downloads rankings from `RANKINGS_URL` for the current week                                                                       |
+  | `espn_rosters.py`             | Fetches rosters for all configured ESPN leagues                                                                                   |
+  | `sleeper_rosters.py`          | Fetches rosters for all configured Sleeper leagues                                                                                |
+  | `output_rankings.py`          | Generates the weekly start/sit report (`start-sit.md`)                                                                            |
+  | `copy_newest_ros.py`          | Copies matching rest-of-season rankings to `rankings/rest-of-season.csv`                                                          |
+  | `find_top_available.py`       | Identifies top available free agents by position                                                                                  |
+  | `parse_yahoo_draft.py`        | Parses Yahoo! draft results into a roster file (run with league ID: `uv run python -m fantasy_ranks.parse_yahoo_draft 960067`)    |
+  | `update_yahoo_rosters.py`     | Updates Yahoo! roster with transaction changes (run with league ID: `uv run python -m fantasy_ranks.update_yahoo_rosters 960067`) |
+  | `reset_project.py`            | Clears all generated data (`rankings/`, `rosters/`, `lineups/`)                                                                   |
+
+  Any module can be run standalone via `uv run python -m fantasy_ranks.<module>` plus any required arguments.
+
 - `tests/` — mirrors the package modules, with shared fixtures for mocking ESPN/Sleeper API calls in `tests/conftest.py`.
 
 ## Sample Output - start-sit.md
@@ -320,4 +397,4 @@ uv run pytest
 | 75   | Jalen Hurts     | QB       | PHI  |
 | 65   | MarShawn Lloyd  | RB       | GB   |
 
-_167 players owned in this league_
+167 players owned in this league
