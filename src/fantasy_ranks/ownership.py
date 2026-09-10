@@ -13,8 +13,8 @@ OUTPUT_FILE = PROJECT_ROOT / 'rankings' / 'ownership.md'
 
 def build_ownership_report(config, rosters_dir=ROSTERS_DIR):
     """Return markdown ownership rows for the configured team in each league."""
-    ownership = defaultdict(set)
-    display_names = {}
+    ownership: defaultdict[str, set[str]] = defaultdict(set)
+    display_names: dict[str, str] = {}
 
     for league in config['leagues']:
         league_id = str(league['league_id'])
