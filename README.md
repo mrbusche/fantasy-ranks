@@ -147,8 +147,8 @@ This runs the full pipeline:
 
 **Output Files:**
 
-- **`lineups/start-sit.md`** — Weekly analysis with starting roster recommendations, bench breakdowns, and top 5 available players by position for each league.
-- **`lineups/ros-analysis.md`** — Rest-of-season analysis showing top available players and bottom-ranked rostered players for each league.
+- **`lineups/start-sit.md`** — Weekly analysis with starting roster recommendations, bench breakdowns, top 5 available players by position, and actions for every starting spot in each league.
+- **`lineups/ros-analysis.md`** — Rest-of-season analysis showing top available players, bottom-ranked rostered players, and actions for every starting spot in each league.
 
 For each team, the report includes:
 
