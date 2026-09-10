@@ -68,8 +68,8 @@ def test_main_success():
         patch('fantasy_ranks.cli.run_platform_leagues') as mock_run_platform,
     ):
         main()
-        # Should run download_weekly_rankings + output_rankings + copy_newest_ros + find_top_available
-        assert mock_run_module.call_count == 4
+        # Should run download_weekly_rankings + output_rankings + copy_newest_ros + find_top_available + ownership
+        assert mock_run_module.call_count == 5
         assert mock_run_platform.call_count == 2
 
 

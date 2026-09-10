@@ -5,7 +5,7 @@
 .venv
 
 config.json
-rankings/*.csv
+rankings/*
 
 lineups/ros-analysis.md
 lineups/start-sit.md
