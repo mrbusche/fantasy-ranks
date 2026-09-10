@@ -16,7 +16,7 @@ TRANSACTION_PATTERN = re.compile(
     + r'\s+(?:Free Agent|Waiver|Trade)\s*)?'
     + r'(?:'
     + _PLAYER_ENTRY.format(prefix='dropped')
-    + r'\s+(?:To Waivers|To Free Agency|Trade)\s*)?$'
+    + r'(?:\s+[A-Z]{1,3})?\s+(?:To Waivers|To Free Agency|Trade)\s*)?$'
 )
 
 # Matches the trailing timestamp on a transaction row, e.g. "Sep 9, 4:51 pm"

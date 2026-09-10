@@ -22,6 +22,15 @@ def test_parse_transaction_row_drop_only():
     assert parse_transaction_row(row) == ('Runitback', None, 'Dalton Kincaid')
 
 
+def test_parse_transaction_row_allows_player_status_marker():
+    row = ' \tCam Little Jax - K Free Agent Keaton Mitchell LAC - RB Q To Waivers\tThe Sheriff Sep 9, 6:18 pm'
+    assert parse_transaction_row(row) == (
+        'The Sheriff',
+        {'name': 'Cam Little', 'position': 'K'},
+        'Keaton Mitchell',
+    )
+
+
 def test_parse_transaction_row_ignores_non_transaction_rows():
     assert parse_transaction_row('Added Players') is None
     assert parse_transaction_row('Team Alpha') is None
