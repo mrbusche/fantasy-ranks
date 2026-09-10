@@ -140,7 +140,7 @@ This runs the full pipeline:
 
 1. Downloads the latest weekly rankings (if `RANKINGS_URL` is set)
 2. Pulls rosters from ESPN and Sleeper leagues
-3. Loads manually maintained Yahoo! roster files
+3. Fetches and applies the latest transactions for any configured Yahoo! leagues (requires `YAHOO_COOKIE`, and only if the league's roster JSON has already been created via one of the import options below)
 4. Generates a weekly start/sit report: `lineups/start-sit.md`
 5. Refreshes rest-of-season rankings (if `REST_OF_SEASON_RANKINGS_PATTERN` is set)
 6. Identifies top available players by position
@@ -158,7 +158,27 @@ For each team, the report includes:
 
 ## Importing Yahoo! rosters
 
-Yahoo! leagues are kept up to date manually. To import or refresh a Yahoo! draft roster, open the draft results page, copy the entire page (press `Ctrl + A`, then `Ctrl + C`), and save the copied text to:
+Yahoo! leagues are kept up to date manually. There are two ways to import or refresh a Yahoo! draft roster:
+
+### Option 1: Fetch automatically
+
+Yahoo!'s draft results page requires an authenticated session, so you need to supply a session cookie once:
+
+1. Log into Yahoo! Fantasy Football in your browser.
+2. Open developer tools, go to the Console tab, run `copy(document.cookie)`, then paste the copied value. If requests still fail (e.g. redirected to login), instead copy the full `Cookie` request header from the Network tab (use the "raw" headers view) or read the cookie list from the Application/Storage tab for `football.fantasysports.yahoo.com`.
+3. Add it to your `.env` file: `YAHOO_COOKIE=<paste cookie value here>`.
+
+Then run:
+
+```shell
+uv run python -m fantasy_ranks.fetch_yahoo_draft {leagueId}
+```
+
+This downloads the draft results page (sorted by team), saves the extracted text to `rosters/yahoo_{leagueId}.txt`, and automatically runs the parser to produce `rosters/yahoo_{leagueId}_owned_players.json`.
+
+### Option 2: Copy/paste manually
+
+Open the draft results page, copy the entire page (press `Ctrl + A`, then `Ctrl + C`), and save the copied text to:
 
 ```text
 rosters/yahoo_{leagueId}.txt
@@ -174,7 +194,15 @@ The generated `rosters/yahoo_{leagueId}_owned_players.json` file is treated as t
 
 ### Updating Yahoo! rosters after waivers
 
-After waivers or other roster changes, open the Yahoo! transactions page, copy the entire page (press `Ctrl + A`, then `Ctrl + C`), and save the copied text to:
+Yahoo! roster updates run automatically as part of `uv run fantasy-ranks` for any league configured with `"platform": "yahoo"` in `config.json` (requires `YAHOO_COOKIE` to be set). If `rosters/yahoo_{leagueId}_owned_players.json` doesn't exist yet, the draft is imported automatically first. You can also run it for a single league on demand:
+
+```shell
+uv run python -m fantasy_ranks.fetch_yahoo_transactions {leagueId}
+```
+
+This downloads the transactions page, saves the extracted text to `rosters/yahoo_updates_{leagueId}.txt`, and applies it to `rosters/yahoo_{leagueId}_owned_players.json`. Reprocessing transactions is safe: players are not added if they are already on the roster, and dropping a player who has already been removed has no additional effect.
+
+If you'd rather update rosters manually instead, open the Yahoo! transactions page, copy the entire page (press `Ctrl + A`, then `Ctrl + C`), and save the copied text to:
 
 ```text
 rosters/yahoo_updates_{leagueId}.txt
@@ -185,8 +213,6 @@ Then update the local roster file by running:
 ```shell
 uv run python src\fantasy_ranks\update_yahoo_rosters.py {leagueId}
 ```
-
-You can copy and process the same transactions page more than once. Reprocessing transactions is safe: players are not added if they are already on the roster, and dropping a player who has already been removed has no additional effect.
 
 ## Resetting the project
 
@@ -247,8 +273,11 @@ uv run pytest
   | `output_rankings.py`          | Generates the weekly start/sit report (`start-sit.md`)                                                                            |
   | `copy_newest_ros.py`          | Copies matching rest-of-season rankings to `rankings/rest-of-season.csv`                                                          |
   | `find_top_available.py`       | Identifies top available free agents by position                                                                                  |
+  | `fetch_yahoo_draft.py`        | Downloads and parses a Yahoo! draft results page into a roster file (run with league ID: `uv run python -m fantasy_ranks.fetch_yahoo_draft 960067`) |
   | `parse_yahoo_draft.py`        | Parses Yahoo! draft results into a roster file (run with league ID: `uv run python -m fantasy_ranks.parse_yahoo_draft 960067`)    |
+  | `fetch_yahoo_transactions.py` | Downloads and applies a Yahoo! transactions page to a roster file; runs automatically for Yahoo! leagues as part of `uv run fantasy-ranks` (run standalone with league ID: `uv run python -m fantasy_ranks.fetch_yahoo_transactions 960067`) |
   | `update_yahoo_rosters.py`     | Updates Yahoo! roster with transaction changes (run with league ID: `uv run python -m fantasy_ranks.update_yahoo_rosters 960067`) |
+  | `yahoo_web.py`                | Shared helpers for fetching Yahoo! pages and extracting their plain text (not run directly)                                       |
   | `reset_project.py`            | Clears all generated data (`rankings/`, `rosters/`, `lineups/`)                                                                   |
 
   Any module can be run standalone via `uv run python -m fantasy_ranks.<module>` plus any required arguments.
