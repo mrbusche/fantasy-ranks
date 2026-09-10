@@ -93,6 +93,7 @@ def main() -> None:
     run_module('fantasy_ranks.output_rankings')
     run_module('fantasy_ranks.copy_newest_ros')
     run_module('fantasy_ranks.find_top_available')
+    run_module('fantasy_ranks.ownership')
 
     print(f'\n{"=" * 50}')
     print(f'🎯 All scripts completed! Total time: {perf_counter() - start_time:.2f} seconds')
