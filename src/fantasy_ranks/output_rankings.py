@@ -623,6 +623,57 @@ def _print_top_available_lists(available_by_position, rankings, lineup_slots):
         safe_print('')
 
 
+def _print_improvement_action(players_by_position, available_by_position, rankings, lineup_slots):
+    """Print the strongest actionable weekly roster move for this league."""
+    upgrades = []
+
+    for position in BASE_SLOT_POSITIONS:
+        starters_needed = lineup_slots.get(position, DEFAULT_LINEUP_SLOTS.get(position, 1))
+        if starters_needed <= 0:
+            continue
+
+        available = sorted(available_by_position.get(position, []), key=lambda player: player['rank'])
+        if not available:
+            continue
+
+        ranked_roster = []
+        for player in players_by_position.get(position, []):
+            ranking_info = find_player_ranking(player['name'], position, rankings)
+            if ranking_info:
+                ranked_roster.append((ranking_info['rank'], player['name']))
+        ranked_roster.sort()
+
+        best_available = available[0]
+        if len(ranked_roster) < starters_needed:
+            upgrades.append(
+                (
+                    float('-inf'),
+                    f'Add **{best_available["name"]} ({_position_label(position)} - '
+                    f'{best_available["proTeam"]})** from free agency to fill an open {position} slot.',
+                )
+            )
+            continue
+
+        weakest_starter_rank, weakest_starter_name = ranked_roster[starters_needed - 1]
+        if best_available['rank'] < weakest_starter_rank:
+            upgrades.append(
+                (
+                    weakest_starter_rank - best_available['rank'],
+                    f'Add **{best_available["name"]} ({_position_label(position)} - '
+                    f'{best_available["proTeam"]})** and start them over **{weakest_starter_name}** '
+                    f'({weakest_starter_rank} vs. {best_available["rank"]} in the rankings).',
+                )
+            )
+
+    safe_print('### Action to Improve This Team')
+    safe_print('')
+    if upgrades:
+        safe_print(max(upgrades, key=lambda upgrade: upgrade[0])[1])
+    else:
+        safe_print('No clear waiver upgrade is available; keep the current starters and monitor the top available players.')
+    safe_print('')
+
+
 def print_combined_position_rankings(
     players_by_position, all_owned_players, rankings, team_name, league_name, lineup_slots=None
 ):
@@ -649,6 +700,7 @@ def print_combined_position_rankings(
     _print_bench_table(players_by_position, rankings, starter_keys)
 
     _print_top_available_lists(available_by_position, rankings, lineup_slots)
+    _print_improvement_action(players_by_position, available_by_position, rankings, lineup_slots)
 
 
 def output_rankings(

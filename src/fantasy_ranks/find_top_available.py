@@ -130,6 +130,23 @@ def find_team_players_with_rankings(team_name, league_data, ros_rankings):
     return team_players_ranked
 
 
+def format_improvement_action(top_available, bottom_10_team):
+    """Create a concrete rest-of-season add/drop recommendation for a league."""
+    if not top_available:
+        return 'No ranked free agents are available; hold the roster and look for a trade to address weaknesses.'
+    if not bottom_10_team:
+        return f'Add **{top_available[0]["name"]} ({top_available[0]["position"]})** from free agency to improve the roster.'
+
+    add_player = top_available[0]
+    drop_player = bottom_10_team[0]
+    drop_rank = drop_player['rank'] if drop_player['rank'] != 999 else 'NR'
+    return (
+        f'Add **{add_player["name"]} ({add_player["position"]})** and consider dropping '
+        f'**{drop_player["name"]} ({drop_player["position"]})** '
+        f'({add_player["rank"]} ROS rank vs. {drop_rank}).'
+    )
+
+
 def get_owned_players_by_league_with_teams(config):
     """Get owned players for each league separately, including team rosters."""
     base_dir = Path(__file__).resolve().parent.parent.parent
@@ -247,6 +264,8 @@ def find_top_available_players(config):
                     f'| {rank_display} | {player["name"]} | {player["position"]} | {player["team"]} |\n'
                 )
 
+        markdown_lines.append('\n### Action to Improve This Team\n')
+        markdown_lines.append(f'{format_improvement_action(top_available, bottom_10_team)}\n')
         markdown_lines.append(f'\n*{len(owned_players)} players owned in this league*\n')
 
     output_file = base_dir / 'lineups' / 'ros-analysis.md'

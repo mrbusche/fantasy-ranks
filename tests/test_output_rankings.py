@@ -219,6 +219,7 @@ def test_print_combined_position_rankings_optimal_and_header():
     assert '### Top 5 Available Players by Position' in output_text
     assert '#### Quarterbacks (QB)' in output_text
     assert '| Lamar Jackson (QB - BAL) | QB2 |' in output_text
+    assert '### Action to Improve This Team' in output_text
 
 
 def test_print_combined_position_rankings_free_agent_better_and_flex():

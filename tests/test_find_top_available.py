@@ -142,6 +142,8 @@ def test_find_top_available_players_writes_analysis(tmp_path):
     assert '## League A Team A' in output
     assert '| 1 | Free Player | WR | TST |' in output
     assert '| 2 | Owned Player | RB | TST |' in output
+    assert '### Action to Improve This Team' in output
+    assert 'Add **Free Player (WR)**' in output
 
 
 def test_find_top_available_players_handles_missing_rankings_and_leagues(tmp_path):
