@@ -17,6 +17,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLATFORM_MODULES = {
     'espn': 'fantasy_ranks.espn_rosters',
     'sleeper': 'fantasy_ranks.sleeper_rosters',
+    'yahoo': 'fantasy_ranks.fetch_yahoo_transactions',
 }
 
 
@@ -46,10 +47,6 @@ def run_module(module_name, additional_args=None):
 
 def run_platform_leagues(platform, leagues):
     """Run the platform-specific roster fetch module for multiple leagues."""
-    if platform == 'yahoo':
-        print('ℹ️  Skipping Yahoo! roster updates; using manually maintained roster files.')
-        return
-
     module_name = PLATFORM_MODULES.get(platform)
 
     if module_name is None:
@@ -60,7 +57,11 @@ def run_platform_leagues(platform, leagues):
         print(f'\n{"=" * 50}')
         print(f'League: {league_name} ({platform})')
         print(f'{"=" * 50}')
-        run_module(module_name, ['--league-id', str(league_id), '--ppr', ppr_type])
+        if platform == 'yahoo':
+            # Yahoo! has no scoring-type-aware roster endpoint - just fetch and apply transactions.
+            run_module(module_name, [str(league_id)])
+        else:
+            run_module(module_name, ['--league-id', str(league_id), '--ppr', ppr_type])
 
 
 def main() -> None:

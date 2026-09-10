@@ -670,7 +670,9 @@ def _print_improvement_action(players_by_position, available_by_position, rankin
     if upgrades:
         safe_print(max(upgrades, key=lambda upgrade: upgrade[0])[1])
     else:
-        safe_print('No clear waiver upgrade is available; keep the current starters and monitor the top available players.')
+        safe_print(
+            'No clear waiver upgrade is available; keep the current starters and monitor the top available players.'
+        )
     safe_print('')
 
 

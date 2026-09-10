@@ -29,7 +29,7 @@ def test_run_module_subprocess_error():
 def test_run_platform_leagues_yahoo():
     with patch('fantasy_ranks.cli.run_module') as mock_run_module:
         run_platform_leagues('yahoo', [('123', 'half', 'My League')])
-        assert not mock_run_module.called
+        mock_run_module.assert_called_once_with('fantasy_ranks.fetch_yahoo_transactions', ['123'])
 
 
 def test_run_platform_leagues_espn():
