@@ -5,10 +5,15 @@ description = "Generate weekly start/sit recommendations and rest-of-season anal
 readme = "README.md"
 authors = [{ name = "Matt Busche", email = "mrbusche@gmail.com" }]
 requires-python = ">=3.13"
-dependencies = ["beautifulsoup4>=4.12.3", "espn-api>=0.46.0", "python-dotenv>=1.0.1", "requests>=2.34.2"]
+dependencies = [
+  "beautifulsoup4==4.15.0",
+  "espn-api==0.46.0",
+  "python-dotenv==1.2.3",
+  "requests==2.34.2",
+]
 
 [dependency-groups]
-dev = ["pytest>=9.1.1", "pytest-cov>=7.1.0", "ruff>=0.16.6", "ty>=0.0.78"]
+dev = ["pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.16.6", "ty==0.0.78"]
 
 
 [project.scripts]

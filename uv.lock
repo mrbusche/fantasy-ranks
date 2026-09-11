@@ -265,18 +265,18 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "beautifulsoup4", specifier = ">=4.12.3" },
-    { name = "espn-api", specifier = ">=0.46.0" },
-    { name = "python-dotenv", specifier = ">=1.0.1" },
-    { name = "requests", specifier = ">=2.34.2" },
+    { name = "beautifulsoup4", specifier = "==4.15.0" },
+    { name = "espn-api", specifier = "==0.46.0" },
+    { name = "python-dotenv", specifier = "==1.2.3" },
+    { name = "requests", specifier = "==2.34.2" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pytest", specifier = ">=9.1.1" },
-    { name = "pytest-cov", specifier = ">=7.1.0" },
-    { name = "ruff", specifier = ">=0.16.6" },
-    { name = "ty", specifier = ">=0.0.78" },
+    { name = "pytest", specifier = "==9.1.1" },
+    { name = "pytest-cov", specifier = "==7.1.0" },
+    { name = "ruff", specifier = "==0.16.6" },
+    { name = "ty", specifier = "==0.0.78" },
 ]
 
 [[package]]
