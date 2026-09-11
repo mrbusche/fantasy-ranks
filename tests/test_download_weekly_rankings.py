@@ -66,12 +66,12 @@ def test_download_file_success(tmp_path):
         '2,Patrick Mahomes,KC,QB,90\n'
     )
 
-    def mock_urlretrieve(url, filename):
+    def mock_urlretrieve(filename):
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(dummy_csv_content)
 
     with patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve):
-        download_file('http://example.com/data.csv', output_file)
+        download_file('https://example.com/data.csv', output_file)
 
     assert os.path.exists(output_file)
     with open(output_file, 'r', encoding='utf-8') as f:
@@ -86,12 +86,12 @@ def test_download_file_header_variant_no_space(tmp_path):
     output_file = str(tmp_path / 'rankings_no_space.csv')
     dummy_csv_content = 'Rank,PlayerName,Team,Position\n1,Justin Jefferson,MIN,WR\n'
 
-    def mock_urlretrieve(url, filename):
+    def mock_urlretrieve(filename):
         with open(filename, 'w', encoding='utf-8') as f:
             f.write(dummy_csv_content)
 
     with patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve):
-        download_file('http://example.com/data.csv', output_file)
+        download_file('https://example.com/data.csv', output_file)
 
     assert os.path.exists(output_file)
     with open(output_file, 'r', encoding='utf-8') as f:
@@ -104,12 +104,12 @@ def test_download_file_header_variant_no_space(tmp_path):
 def test_download_file_no_valid_data(tmp_path):
     output_file = str(tmp_path / 'empty.csv')
 
-    def mock_urlretrieve(url, filename):
+    def mock_urlretrieve(filename):
         with open(filename, 'w', encoding='utf-8') as f:
             f.write('Invalid,Data,Only\n1,2,3\n')
 
     with patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve):
-        download_file('http://example.com/data.csv', output_file)
+        download_file('https://example.com/data.csv', output_file)
 
     assert not os.path.exists(output_file)
 
@@ -117,12 +117,12 @@ def test_download_file_no_valid_data(tmp_path):
 def test_download_file_fills_missing_columns(tmp_path):
     output_file = str(tmp_path / 'missing-column.csv')
 
-    def mock_urlretrieve(url, filename):
+    def mock_urlretrieve(filename):
         with open(filename, 'w', encoding='utf-8') as f:
             f.write('Rank,Player Name\n1,Josh Allen\n')
 
     with patch('urllib.request.urlretrieve', side_effect=mock_urlretrieve):
-        download_file('http://example.com/data.csv', output_file)
+        download_file('https://example.com/data.csv', output_file)
 
     assert open(output_file, encoding='utf-8').read().splitlines()[1] == '1,Josh Allen,,'
 
@@ -130,7 +130,7 @@ def test_download_file_fills_missing_columns(tmp_path):
 def test_download_file_network_error(tmp_path):
     output_file = str(tmp_path / 'failed.csv')
     with patch('urllib.request.urlretrieve', side_effect=OSError('Network unreachable')):
-        download_file('http://example.com/data.csv', output_file)
+        download_file('https://example.com/data.csv', output_file)
 
     assert not os.path.exists(output_file)
 
@@ -150,7 +150,7 @@ def test_main_skips_download_and_notifies_when_env_not_set(monkeypatch, capsys):
 
 
 def test_main_success(monkeypatch, tmp_path):
-    monkeypatch.setenv('RANKINGS_URL', 'http://example.com/rankings?week={week}')
+    monkeypatch.setenv('RANKINGS_URL', 'https://example.com/rankings?week={week}')
     with (
         patch('fantasy_ranks.download_weekly_rankings.load_dotenv'),
         patch('fantasy_ranks.download_weekly_rankings.file_needs_update', return_value=True),
@@ -162,7 +162,7 @@ def test_main_success(monkeypatch, tmp_path):
 
 
 def test_main_files_already_recent(monkeypatch):
-    monkeypatch.setenv('RANKINGS_URL', 'http://example.com/rankings?week={week}')
+    monkeypatch.setenv('RANKINGS_URL', 'https://example.com/rankings?week={week}')
     with (
         patch('fantasy_ranks.download_weekly_rankings.load_dotenv'),
         patch('fantasy_ranks.download_weekly_rankings.file_needs_update', return_value=False),

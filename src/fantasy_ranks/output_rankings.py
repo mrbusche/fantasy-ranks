@@ -783,9 +783,6 @@ def output_rankings(
             all_owned_players.update(custom_owned)
             safe_print(f'  - Added {len(all_owned_players) - count_before} players from custom list')
 
-    if rankings is None:
-        rankings = load_rankings(scoring_type)
-
     if not rankings:
         safe_print('**No rankings found!**')
         return False
