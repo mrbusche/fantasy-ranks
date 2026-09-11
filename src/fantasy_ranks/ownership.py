@@ -8,7 +8,7 @@ from fantasy_ranks.shared_functions import load_league_config, normalize_name
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 ROSTERS_DIR = PROJECT_ROOT / 'rosters'
-OUTPUT_FILE = PROJECT_ROOT / 'rankings' / 'ownership.md'
+OUTPUT_FILE = PROJECT_ROOT / 'lineups' / 'ownership.md'
 
 
 def build_ownership_report(config, rosters_dir=ROSTERS_DIR):
