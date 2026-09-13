@@ -5,6 +5,7 @@ each configured league, build the start/sit report, refresh the rest-of-season
 rankings, and find the top available free agents.
 """
 
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -64,6 +65,22 @@ def run_platform_leagues(platform, leagues):
             run_module(module_name, ['--league-id', str(league_id), '--ppr', ppr_type])
 
 
+def format_markdown():
+    """Format repository markdown files with `npm run fmt` or advise the user to run `npm ci`."""
+    node_modules = PROJECT_ROOT / 'node_modules'
+    if node_modules.exists():
+        print(f'\n{"=" * 50}')
+        print('Running: npm run fmt')
+        print(f'{"=" * 50}')
+        npm_bin = shutil.which('npm') or 'npm'
+        try:
+            subprocess.run([npm_bin, 'run', 'fmt'], cwd=PROJECT_ROOT, check=False)
+        except (OSError, ValueError, subprocess.SubprocessError) as e:
+            print(f'❌ Failed to run npm run fmt: {e}')
+    else:
+        print('\n⚠️  node_modules does not exist. Run `npm ci` to format the markdown files in the repo on next run.')
+
+
 def main() -> None:
     """Run the full fantasy football analysis pipeline in sequence."""
     start_time = perf_counter()
@@ -95,6 +112,8 @@ def main() -> None:
     run_module('fantasy_ranks.copy_newest_ros')
     run_module('fantasy_ranks.find_top_available')
     run_module('fantasy_ranks.ownership')
+
+    format_markdown()
 
     print(f'\n{"=" * 50}')
     print(f'🎯 All scripts completed! Total time: {perf_counter() - start_time:.2f} seconds')

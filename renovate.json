@@ -4,5 +4,5 @@
   "schedule": ["on friday after 9am and before 5pm"],
   "extends": ["config:recommended"],
   "assignees": ["@mrbusche"],
-  "ignoreUnstable": false  
+  "ignoreUnstable": false
 }

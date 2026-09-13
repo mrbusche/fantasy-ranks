@@ -16,3 +16,5 @@ rosters/yahoo_*.txt
 
 **/__pycache__/*
 .coverage
+
+node_modules/
