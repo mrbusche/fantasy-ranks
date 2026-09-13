@@ -264,21 +264,21 @@ uv run pytest
 
 - `src/fantasy_ranks/` — the installable package with the following runnable modules:
 
-  | Module                        | Purpose                                                                                                                           |
-  | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-  | `cli.py`                      | Orchestrates the full pipeline (called by `uv run fantasy-ranks`)                                                                 |
-  | `download_weekly_rankings.py` | Downloads rankings from `RANKINGS_URL` for the current week                                                                       |
-  | `espn_rosters.py`             | Fetches rosters for all configured ESPN leagues                                                                                   |
-  | `sleeper_rosters.py`          | Fetches rosters for all configured Sleeper leagues                                                                                |
-  | `output_rankings.py`          | Generates the weekly start/sit report (`start-sit.md`)                                                                            |
-  | `copy_newest_ros.py`          | Copies matching rest-of-season rankings to `rankings/rest-of-season.csv`                                                          |
-  | `find_top_available.py`       | Identifies top available free agents by position                                                                                  |
-  | `fetch_yahoo_draft.py`        | Downloads and parses a Yahoo! draft results page into a roster file (run with league ID: `uv run python -m fantasy_ranks.fetch_yahoo_draft 960067`) |
-  | `parse_yahoo_draft.py`        | Parses Yahoo! draft results into a roster file (run with league ID: `uv run python -m fantasy_ranks.parse_yahoo_draft 960067`)    |
+  | Module                        | Purpose                                                                                                                                                                                                                                      |
+  | ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `cli.py`                      | Orchestrates the full pipeline (called by `uv run fantasy-ranks`)                                                                                                                                                                            |
+  | `download_weekly_rankings.py` | Downloads rankings from `RANKINGS_URL` for the current week                                                                                                                                                                                  |
+  | `espn_rosters.py`             | Fetches rosters for all configured ESPN leagues                                                                                                                                                                                              |
+  | `sleeper_rosters.py`          | Fetches rosters for all configured Sleeper leagues                                                                                                                                                                                           |
+  | `output_rankings.py`          | Generates the weekly start/sit report (`start-sit.md`)                                                                                                                                                                                       |
+  | `copy_newest_ros.py`          | Copies matching rest-of-season rankings to `rankings/rest-of-season.csv`                                                                                                                                                                     |
+  | `find_top_available.py`       | Identifies top available free agents by position                                                                                                                                                                                             |
+  | `fetch_yahoo_draft.py`        | Downloads and parses a Yahoo! draft results page into a roster file (run with league ID: `uv run python -m fantasy_ranks.fetch_yahoo_draft 960067`)                                                                                          |
+  | `parse_yahoo_draft.py`        | Parses Yahoo! draft results into a roster file (run with league ID: `uv run python -m fantasy_ranks.parse_yahoo_draft 960067`)                                                                                                               |
   | `fetch_yahoo_transactions.py` | Downloads and applies a Yahoo! transactions page to a roster file; runs automatically for Yahoo! leagues as part of `uv run fantasy-ranks` (run standalone with league ID: `uv run python -m fantasy_ranks.fetch_yahoo_transactions 960067`) |
-  | `update_yahoo_rosters.py`     | Updates Yahoo! roster with transaction changes (run with league ID: `uv run python -m fantasy_ranks.update_yahoo_rosters 960067`) |
-  | `yahoo_web.py`                | Shared helpers for fetching Yahoo! pages and extracting their plain text (not run directly)                                       |
-  | `reset_project.py`            | Clears all generated data (`rankings/`, `rosters/`, `lineups/`)                                                                   |
+  | `update_yahoo_rosters.py`     | Updates Yahoo! roster with transaction changes (run with league ID: `uv run python -m fantasy_ranks.update_yahoo_rosters 960067`)                                                                                                            |
+  | `yahoo_web.py`                | Shared helpers for fetching Yahoo! pages and extracting their plain text (not run directly)                                                                                                                                                  |
+  | `reset_project.py`            | Clears all generated data (`rankings/`, `rosters/`, `lineups/`)                                                                                                                                                                              |
 
   Any module can be run standalone via `uv run python -m fantasy_ranks.<module>` plus any required arguments.
 

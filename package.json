@@ -1,0 +1,19 @@
+{
+  "name": "fantasy-ranks",
+  "version": "1.0.0",
+  "description": "this is only used for linting markdown",
+  "homepage": "https://github.com/mrbusche/fantasy-ranks#readme",
+  "bugs": {
+    "url": "https://github.com/mrbusche/fantasy-ranks/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mrbusche/fantasy-ranks.git"
+  },
+  "scripts": {
+    "fmt": "oxfmt ."
+  },
+  "dependencies": {
+    "oxfmt": "0.67.0"
+  }
+}
