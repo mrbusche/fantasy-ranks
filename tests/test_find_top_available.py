@@ -14,7 +14,7 @@ from fantasy_ranks.find_top_available import (
 def test_load_ros_rankings(tmp_path):
     rankings_file = tmp_path / 'rest-of-season.csv'
     rankings_file.write_text(
-        'Player,Position,Rank,Team\nJosh Allen,QB,2,BUF\nSaquon Barkley,RB,1,PHI\n',
+        'Player,Pos,Rank,Team\nJosh Allen,QB,2,BUF\nSaquon Barkley,RB,1,PHI\n',
         encoding='utf-8',
     )
 
@@ -26,7 +26,7 @@ def test_load_ros_rankings(tmp_path):
 
 def test_load_ros_rankings_returns_empty_for_invalid_csv(tmp_path):
     rankings_file = tmp_path / 'invalid.csv'
-    rankings_file.write_text('Player,Position,Rank\nJosh Allen,QB,2\n', encoding='utf-8')
+    rankings_file.write_text('Player,Pos,Rank\nJosh Allen,QB,2\n', encoding='utf-8')
 
     assert load_ros_rankings(rankings_file) == []
 
