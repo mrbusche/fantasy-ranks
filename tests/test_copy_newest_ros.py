@@ -61,6 +61,44 @@ def test_copy_newest_ros_file_does_nothing_without_matches(tmp_path):
         copy_newest_ros_file()
 
 
+def test_copy_newest_ros_file_also_copies_2qb_pattern_when_configured(tmp_path):
+    downloads = tmp_path / 'Downloads'
+    downloads.mkdir()
+    standard = downloads / 'Standard.csv'
+    superflex = downloads / 'Superflex.csv'
+    standard.write_text('standard', encoding='utf-8')
+    superflex.write_text('superflex', encoding='utf-8')
+
+    with (
+        patch('fantasy_ranks.copy_newest_ros.Path.home', return_value=tmp_path),
+        patch('fantasy_ranks.copy_newest_ros.REST_OF_SEASON_RANKINGS_PATTERN', 'Standard.csv'),
+        patch('fantasy_ranks.copy_newest_ros.REST_OF_SEASON_RANKINGS_2QB_PATTERN', 'Superflex.csv'),
+        patch('fantasy_ranks.copy_newest_ros.clean_csv_content') as clean,
+    ):
+        copy_newest_ros_file()
+
+    clean.assert_any_call(str(standard), Path('rankings/rest-of-season.csv'))
+    clean.assert_any_call(str(superflex), Path('rankings/rest-of-season-2qb.csv'))
+    assert clean.call_count == 2
+
+
+def test_copy_newest_ros_file_skips_2qb_when_pattern_not_set(tmp_path):
+    downloads = tmp_path / 'Downloads'
+    downloads.mkdir()
+    standard = downloads / 'Standard.csv'
+    standard.write_text('standard', encoding='utf-8')
+
+    with (
+        patch('fantasy_ranks.copy_newest_ros.Path.home', return_value=tmp_path),
+        patch('fantasy_ranks.copy_newest_ros.REST_OF_SEASON_RANKINGS_PATTERN', 'Standard.csv'),
+        patch('fantasy_ranks.copy_newest_ros.REST_OF_SEASON_RANKINGS_2QB_PATTERN', None),
+        patch('fantasy_ranks.copy_newest_ros.clean_csv_content') as clean,
+    ):
+        copy_newest_ros_file()
+
+    clean.assert_called_once_with(str(standard), Path('rankings/rest-of-season.csv'))
+
+
 def test_copy_newest_ros_file_reports_copy_failure(tmp_path):
     downloads = tmp_path / 'Downloads'
     downloads.mkdir()

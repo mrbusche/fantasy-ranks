@@ -5,9 +5,13 @@ Also shows the 10 lowest ranked players from a team.
 """
 
 import csv
+import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from fantasy_ranks.shared_functions import (
+    DEFAULT_LINEUP_SLOTS,
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -16,8 +20,16 @@ from fantasy_ranks.shared_functions import (
     normalize_name,
 )
 
+load_dotenv(Path(__file__).resolve().parents[2] / '.env')
+
+# Glob patterns used by copy_newest_ros to populate the ROS rankings files below. Presence of
+# REST_OF_SEASON_RANKINGS_2QB_PATTERN indicates a separate 2 QB/Superflex ROS file is expected;
+# if it isn't set (or the file isn't there yet), we simply fall back to the standard rankings.
+REST_OF_SEASON_RANKINGS_PATTERN = os.environ.get('REST_OF_SEASON_RANKINGS_PATTERN')
+REST_OF_SEASON_RANKINGS_2QB_PATTERN = os.environ.get('REST_OF_SEASON_RANKINGS_2QB_PATTERN')
+
 PLAYER_NAME_COLUMN = 'Player'
-POSITION_COLUMN = 'Position'
+POSITION_COLUMN = 'Pos'
 RANK_COLUMN = 'Rank'
 TEAM_COLUMN = 'Team'
 
@@ -90,6 +102,12 @@ def find_available_for_league(ros_rankings, owned_players):
     # Sort by rank and take top 10
     available_players.sort(key=lambda x: x['rank'])
     return available_players[:10]
+
+
+def is_2qb_league(league):
+    """Return True if a league starts 2+ QBs or uses a SUPERFLEX slot."""
+    lineup_slots = league.get('lineup_slots') or DEFAULT_LINEUP_SLOTS
+    return lineup_slots.get('SUPERFLEX', 0) > 0 or lineup_slots.get('QB', 0) >= 2
 
 
 def find_team_players_with_rankings(team_name, league_data, ros_rankings):
@@ -189,11 +207,12 @@ def find_top_available_players(config):
     """Main function to find top 10 available players from ROS rankings for each league."""
     base_dir = Path(__file__).resolve().parent.parent.parent
     ros_file = base_dir / 'rankings' / 'rest-of-season.csv'
+    ros_2qb_file = base_dir / 'rankings' / 'rest-of-season-2qb.csv'
 
     print('🏈 Finding Top 10 Available Players by League from Rest of Season Rankings')
     print('=' * 80)
 
-    # Load ROS rankings
+    # Load standard ROS rankings
     print(f'Loading ROS rankings from {ros_file}...')
     ros_rankings = load_ros_rankings(ros_file)
 
@@ -202,6 +221,22 @@ def find_top_available_players(config):
         return
 
     print(f'✅ Loaded {len(ros_rankings)} players from ROS rankings')
+
+    # Load 2 QB/Superflex ROS rankings, if configured. Missing pattern/file never fails the run -
+    # leagues that need it simply fall back to the standard rankings.
+    ros_2qb_rankings = ros_rankings
+    if not REST_OF_SEASON_RANKINGS_2QB_PATTERN:
+        print('ℹ️  REST_OF_SEASON_RANKINGS_2QB_PATTERN not set; using standard rankings for 2 QB/Superflex leagues')
+    elif not ros_2qb_file.exists():
+        print(f'⚠️  {ros_2qb_file} not found; using standard rankings for 2 QB/Superflex leagues')
+    else:
+        print(f'Loading 2 QB/Superflex ROS rankings from {ros_2qb_file}...')
+        loaded_2qb_rankings = load_ros_rankings(ros_2qb_file)
+        if loaded_2qb_rankings:
+            ros_2qb_rankings = loaded_2qb_rankings
+            print(f'✅ Loaded {len(loaded_2qb_rankings)} players from 2 QB/Superflex ROS rankings')
+        else:
+            print('⚠️  Failed to load 2 QB/Superflex ROS rankings; using standard rankings instead')
 
     # Get owned players for each league
     print('\nGetting owned players for each league...')
@@ -213,7 +248,7 @@ def find_top_available_players(config):
 
     # Prepare markdown content
     markdown_lines = [
-        '# Fantasy Football Analysis:\n',
+        '# Fantasy Football Analysis\n',
         '## Top 10 Available Players + Bottom 10 Team Players by League\n',
     ]
 
@@ -231,12 +266,15 @@ def find_top_available_players(config):
         print(f'\n📊 Analyzing {league_name}...')
         print(f'   Found {len(owned_players)} owned players')
 
+        # Use 2 QB/Superflex rankings for leagues that start 2+ QBs or a SUPERFLEX slot.
+        league_rankings = ros_2qb_rankings if is_2qb_league(league) else ros_rankings
+
         # Find top 10 available for this league
-        top_available = find_available_for_league(ros_rankings, owned_players)
+        top_available = find_available_for_league(league_rankings, owned_players)
 
         # Find team's players with rankings
         league_full_data = leagues_full_data[league_name]
-        team_players_ranked = find_team_players_with_rankings(team_name, league_full_data, ros_rankings)
+        team_players_ranked = find_team_players_with_rankings(team_name, league_full_data, league_rankings)
 
         # Get bottom 10 team players (highest rank numbers = worst)
         team_players_ranked.sort(key=lambda x: x['rank'], reverse=True)

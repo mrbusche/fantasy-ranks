@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parents[2] / '.env')
 REST_OF_SEASON_RANKINGS_PATTERN = os.environ.get('REST_OF_SEASON_RANKINGS_PATTERN', 'Ranks*.csv')
+REST_OF_SEASON_RANKINGS_2QB_PATTERN = os.environ.get('REST_OF_SEASON_RANKINGS_2QB_PATTERN')
 
 
 def clean_csv_content(input_file, output_file):
@@ -39,15 +40,16 @@ def clean_csv_content(input_file, output_file):
             return False
 
 
-def copy_newest_ros_file():
+def copy_newest_matching_file(pattern, dest_filename):
+    """Copy the newest file in Downloads matching `pattern` to `rankings/<dest_filename>`."""
     downloads_path = Path.home() / 'Downloads'
 
-    pattern = str(downloads_path / str(REST_OF_SEASON_RANKINGS_PATTERN))
+    full_pattern = str(downloads_path / str(pattern))
 
-    matching_files = glob.glob(pattern)
+    matching_files = glob.glob(full_pattern)
 
     if not matching_files:
-        print(f'❌ No matching files found in Downloads folder for pattern: {REST_OF_SEASON_RANKINGS_PATTERN}')
+        print(f'❌ No matching files found in Downloads folder for pattern: {pattern}')
         return
 
     # Find the newest file based on modification time
@@ -57,12 +59,21 @@ def copy_newest_ros_file():
     dest_dir = Path('rankings')
     os.makedirs(dest_dir, exist_ok=True)
 
-    dest_path = dest_dir / 'rest-of-season.csv'
+    dest_path = dest_dir / dest_filename
 
     if clean_csv_content(newest_file, dest_path):
         print(f'Copied: {Path(newest_file).name} -> {dest_path}')
     else:
         print(f'Failed to copy {newest_file}')
+
+
+def copy_newest_ros_file():
+    copy_newest_matching_file(REST_OF_SEASON_RANKINGS_PATTERN, 'rest-of-season.csv')
+
+    # 2 QB/Superflex rankings are optional - skip quietly if not configured so the rest of the
+    # pipeline never fails because of a missing 2QB pattern/file.
+    if REST_OF_SEASON_RANKINGS_2QB_PATTERN:
+        copy_newest_matching_file(REST_OF_SEASON_RANKINGS_2QB_PATTERN, 'rest-of-season-2qb.csv')
 
 
 if __name__ == '__main__':

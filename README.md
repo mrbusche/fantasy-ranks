@@ -91,6 +91,7 @@ Create a `.env` file in the root:
 ```text
 RANKINGS_URL=https://some-website.com?week={week}&export=csv
 REST_OF_SEASON_RANKINGS_PATTERN=Your Pattern*.csv
+REST_OF_SEASON_RANKINGS_2QB_PATTERN=Your 2QB Pattern*.csv
 
 # Only required for private ESPN leagues
 ESPN_SWID={your-espn-swid}
@@ -99,6 +100,7 @@ ESPN_S2=your-espn-s2-value
 
 - `RANKINGS_URL`: Set this to your rankings source that supports weekly exports as CSV. The `{week}` placeholder is replaced with the current week number.
 - `REST_OF_SEASON_RANKINGS_PATTERN`: Optional glob pattern for finding rest-of-season rankings files in your Downloads folder. If set, the pipeline copies matching files to `rankings/rest-of-season.csv`. Omit if you prefer to manually maintain this file.
+- `REST_OF_SEASON_RANKINGS_2QB_PATTERN`: Optional glob pattern for a separate set of rest-of-season rankings tailored to 2 QB/Superflex leagues. If you maintain a file at `rankings/rest-of-season-2qb.csv`, leagues whose `lineup_slots` start 2+ QBs or a `SUPERFLEX` slot use it instead of the standard rankings. Omit (or leave the file missing) to have those leagues fall back to the standard rankings.
 - `ESPN_SWID` / `ESPN_S2`: Only needed if any configured league is a private ESPN league. Log in to ESPN in your browser, open dev tools, and copy the `espn_s2` and `SWID` cookie values (`SWID` includes the surrounding curly braces).
 
 If `RANKINGS_URL` is not set, the download step will not attempt to refresh files in `rankings/`. Instead, it prints how old each existing file is so you know whether they need to be replaced manually.
@@ -125,6 +127,8 @@ Rank,Player Name,Team,Position
 The full-PPR league setting uses `ppr_flex.csv`; the half-PPR setting uses `half_flex.csv`. The position values in the flex file should be `RB`, `WR`, or `TE`, and the defense file should use `DST` for its position.
 
 The rest-of-season report uses a separate file named `rest-of-season.csv`. It must have the header `Player,Position,Team,Rank`.
+
+For 2 QB/Superflex leagues, you can additionally maintain `rankings/rest-of-season-2qb.csv` with the same header. Leagues whose `lineup_slots` start 2+ QBs or a `SUPERFLEX` slot automatically use this file instead; if it's missing, those leagues fall back to `rest-of-season.csv`.
 
 **Automatic updates:** If you set `REST_OF_SEASON_RANKINGS_PATTERN` in `.env`, the pipeline automatically copies matching files from your Downloads folder to `rankings/rest-of-season.csv`.
 
