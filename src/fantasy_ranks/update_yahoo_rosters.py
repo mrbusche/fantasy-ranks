@@ -3,7 +3,13 @@ import re
 import sys
 
 # Matches a single player entry within a transaction description, e.g. "T.J. Hockenson Min - TE"
-_PLAYER_ENTRY = r'(?P<{prefix}_name>.+?)\s+(?P<{prefix}_team>[A-Za-z0-9/]+)\s*-\s*(?P<{prefix}_pos>[A-Za-z]+)'
+# Yahoo may include a player status marker such as IR/Q/O after the position before the action.
+_PLAYER_ENTRY = (
+    r'(?P<{prefix}_name>.+?)\s+'
+    r'(?P<{prefix}_team>[A-Za-z0-9/]+)\s*-\s*'
+    r'(?P<{prefix}_pos>[A-Za-z]+)'
+    r'(?:\s+(?P<{prefix}_status>[A-Z]{{1,5}}))?'
+)
 
 # Matches a full transaction description, e.g.:
 #   "T.J. Hockenson Min - TE Free Agent Dalton Kincaid Buf - TE To Waivers"  (waiver claim: add + drop)
