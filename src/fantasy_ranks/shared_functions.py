@@ -2,6 +2,7 @@
 
 import json
 from collections import Counter
+from functools import lru_cache
 from pathlib import Path
 
 import requests
@@ -189,6 +190,7 @@ def fetch_league_metadata(platform, league_id):
     to config-provided values or defaults. Yahoo! rosters are maintained
     manually, so no source system lookup is available for that platform.
     """
+    league_id = str(league_id)
     if platform == 'espn':
         return _fetch_espn_league_metadata(league_id)
     if platform == 'sleeper':
@@ -197,7 +199,11 @@ def fetch_league_metadata(platform, league_id):
 
 
 def load_league_config(config_file=None):
-    """Load league configuration from JSON file, validating each league entry."""
+    """Load league configuration from JSON file, validating each league entry.
+
+    Metadata lookups are memoized within a single config load to avoid redundant network calls
+    across multiple teams/league entries while keeping the function deterministic for tests.
+    """
     if config_file is None:
         config_file = Path(__file__).parent.parent.parent / 'config.json'
 
@@ -213,10 +219,16 @@ def load_league_config(config_file=None):
 
     leagues = config.get('leagues', []) if isinstance(config, dict) else []
     valid_leagues = []
+    metadata_cache = {}
+
     for league in leagues:
         # Pull missing scoring_type/league_name/lineup_slots from the source system before validating.
         if not league.get('scoring_type') or not league.get('league_name') or not league.get('lineup_slots'):
-            metadata = fetch_league_metadata(league.get('platform'), league.get('league_id'))
+            cache_key = (league.get('platform'), str(league.get('league_id')))
+            metadata = metadata_cache.get(cache_key)
+            if metadata is None:
+                metadata = fetch_league_metadata(*cache_key)
+                metadata_cache[cache_key] = metadata
             for key in ('scoring_type', 'league_name', 'lineup_slots'):
                 if not league.get(key) and metadata.get(key):
                     league[key] = metadata[key]
@@ -264,6 +276,19 @@ def names_match(name1, name2):
     return bool(name1_normalized in name2_normalized or name2_normalized in name1_normalized)
 
 
+def build_normalized_name_index(names):
+    """Create a lookup from normalized names to original names for fast ownership checks."""
+    index = {}
+    for name in names:
+        if not name:
+            continue
+        normalized = normalize_name(name)
+        if normalized:
+            index.setdefault(normalized, []).append(name)
+    return index
+
+
+@lru_cache(maxsize=20000)
 def normalize_name(name):
     """Normalize player names to handle common variations."""
     if not name:

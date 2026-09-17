@@ -12,6 +12,7 @@ from dotenv import load_dotenv
 
 from fantasy_ranks.shared_functions import (
     DEFAULT_LINEUP_SLOTS,
+    build_normalized_name_index,
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -70,9 +71,13 @@ def is_player_owned(ros_player, all_owned_players, normalized_owned_players=None
     normalized_ros_name = normalize_name(player_name)
 
     if normalized_owned_players is None:
-        normalized_owned_players = {normalize_name(name) for name in all_owned_players}
+        normalized_owned_players = set(build_normalized_name_index(all_owned_players).keys())
 
     if normalized_ros_name in normalized_owned_players:
+        return True
+
+    normalized_owned_index = build_normalized_name_index(all_owned_players)
+    if normalized_ros_name in normalized_owned_index:
         return True
 
     # Check against pre-normalized names to avoid repeating work.
