@@ -31,6 +31,11 @@ def test_parse_transaction_row_allows_player_status_marker():
     )
 
 
+def test_parse_transaction_row_allows_ir_status_marker_before_action():
+    row = " \tJa'Kobi Lane BAL - WR IR Free Agent\tThe Black Hole Sep 9, 6:18 pm"
+    assert parse_transaction_row(row) == ('The Black Hole', {'name': "Ja'Kobi Lane", 'position': 'WR'}, None)
+
+
 def test_parse_transaction_row_ignores_non_transaction_rows():
     assert parse_transaction_row('Added Players') is None
     assert parse_transaction_row('Team Alpha') is None
