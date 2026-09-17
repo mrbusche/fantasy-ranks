@@ -7,10 +7,12 @@ Analyzes a team's roster against weekly rankings and finds top available players
 import csv
 import json
 from collections import defaultdict
+from functools import lru_cache
 from pathlib import Path
 
 from fantasy_ranks.shared_functions import (
     DEFAULT_LINEUP_SLOTS,
+    build_normalized_name_index,
     get_all_owned_players,
     get_required_column,
     load_league_config,
@@ -204,14 +206,34 @@ def load_rankings(scoring_type='half'):
     return rankings
 
 
+@lru_cache(maxsize=256)
+def _build_position_lookup(position, ranked_names):
+    """Build a normalized-name lookup for a single position, cached across repeated lookups."""
+    lookup = {}
+    for ranked_name in ranked_names:
+        normalized_name = normalize_name(ranked_name)
+        if normalized_name:
+            lookup.setdefault(normalized_name, []).append(ranked_name)
+    return lookup
+
+
 def find_player_ranking(player_name, position, rankings):
     """Find a player's ranking in the appropriate CSV file."""
     if position not in rankings:
         return None
 
+    position_rankings = rankings[position]
+
     # Direct name match
-    if player_name in rankings[position]:
-        return rankings[position][player_name]
+    if player_name in position_rankings:
+        return position_rankings[player_name]
+
+    normalized_lookup = _build_position_lookup(position, tuple(position_rankings.keys()))
+    normalized_player_name = normalize_name(player_name)
+    if normalized_player_name:
+        normalized_match = normalized_lookup.get(normalized_player_name)
+        if normalized_match:
+            return position_rankings[normalized_match[0]]
 
     # Handle D/ST special cases
     if position == 'D/ST':
@@ -222,19 +244,22 @@ def find_player_ranking(player_name, position, rankings):
         ]
 
         for variation in variations:
-            if variation in rankings[position]:
-                return rankings[position][variation]
+            variation_key = normalize_name(variation)
+            if variation_key:
+                variation_match = normalized_lookup.get(variation_key)
+                if variation_match:
+                    return position_rankings[variation_match[0]]
 
         # Try matching team abbreviations for D/ST
-        for ranked_name in rankings[position]:
-            ranked_team = rankings[position][ranked_name]['team']
+        for ranked_name in position_rankings:
+            ranked_team = position_rankings[ranked_name]['team']
             if player_name.startswith(ranked_team) or ranked_team in player_name:
-                return rankings[position][ranked_name]
+                return position_rankings[ranked_name]
 
     # Try partial matching for other positions
-    for ranked_name in rankings[position]:
+    for ranked_name in position_rankings:
         if names_match(player_name, ranked_name):
-            return rankings[position][ranked_name]
+            return position_rankings[ranked_name]
 
     return None
 
@@ -242,46 +267,41 @@ def find_player_ranking(player_name, position, rankings):
 def get_available_players_by_position(rankings, all_owned_players):
     """Get available (unowned) players by position from rankings data."""
     available_by_position = defaultdict(list)
-    normalized_owned_players = {normalize_name(name) for name in all_owned_players}
+    normalized_owned_players = set(build_normalized_name_index(all_owned_players).keys())
+    owned_name_index = build_normalized_name_index(all_owned_players)
 
     for position, position_rankings in rankings.items():
         for player_name, ranking_info in position_rankings.items():
-            # Create a more comprehensive ownership check
-            is_owned = False
+            normalized_ranking_name = normalize_name(player_name)
 
-            # Direct name check
-            if player_name in all_owned_players:
-                is_owned = True
-            else:
-                # Normalize the ranking player name
-                normalized_ranking_name = normalize_name(player_name)
+            # Direct or normalized match is the fast path; fuzzy substring checks are a fallback.
+            if player_name in all_owned_players or normalized_ranking_name in owned_name_index:
+                continue
 
-                if normalized_ranking_name in normalized_owned_players:
-                    continue
+            matched_owned = None
+            for normalized_owned_name in normalized_owned_players:
+                if (
+                    normalized_ranking_name == normalized_owned_name
+                    or normalized_ranking_name in normalized_owned_name
+                    or normalized_owned_name in normalized_ranking_name
+                    or (position == 'D/ST' and normalized_ranking_name in normalized_owned_name)
+                    or (position == 'D/ST' and normalized_owned_name in normalized_ranking_name)
+                ):
+                    matched_owned = normalized_owned_name
+                    break
 
-                # Compare with pre-normalized names to avoid repeating work.
-                for normalized_owned_name in normalized_owned_players:
-                    # Check various matching scenarios
-                    if (
-                        normalized_ranking_name == normalized_owned_name
-                        or normalized_ranking_name in normalized_owned_name
-                        or normalized_owned_name in normalized_ranking_name
-                        or (position == 'D/ST' and normalized_ranking_name in normalized_owned_name)
-                        or (position == 'D/ST' and normalized_owned_name in normalized_ranking_name)
-                    ):
-                        is_owned = True
-                        break
+            if matched_owned is not None:
+                continue
 
-            if not is_owned:
-                available_by_position[position].append(
-                    {
-                        'name': player_name,
-                        'proTeam': ranking_info['team'],
-                        'injured': False,  # No injury data in rankings
-                        'rank': ranking_info['rank'],
-                        'position': ranking_info['position'],
-                    }
-                )
+            available_by_position[position].append(
+                {
+                    'name': player_name,
+                    'proTeam': ranking_info['team'],
+                    'injured': False,  # No injury data in rankings
+                    'rank': ranking_info['rank'],
+                    'position': ranking_info['position'],
+                }
+            )
 
     return available_by_position
 

@@ -60,11 +60,12 @@ def update_yahoo_league(league_id: str) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Fetch and apply a Yahoo! league transactions page')
-    parser.add_argument('league_id', nargs='?', default=DEFAULT_LEAGUE_ID, help='Yahoo! league ID')
+    parser = argparse.ArgumentParser(description='Fetch and apply Yahoo! league transactions pages')
+    parser.add_argument('league_id', nargs='+', default=[DEFAULT_LEAGUE_ID], help='One or more Yahoo! league IDs')
     args = parser.parse_args()
 
-    update_yahoo_league(args.league_id)
+    for league_id in args.league_id:
+        update_yahoo_league(league_id)
 
 
 if __name__ == '__main__':

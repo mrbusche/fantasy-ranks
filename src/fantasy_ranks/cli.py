@@ -47,22 +47,36 @@ def run_module(module_name, additional_args=None):
 
 
 def run_platform_leagues(platform, leagues):
-    """Run the platform-specific roster fetch module for multiple leagues."""
+    """Run the platform-specific roster fetch module for multiple leagues.
+
+    Group by platform and PPR type where possible so a single batch call can process
+    multiple league IDs without spawning a new Python interpreter per league.
+    """
     module_name = PLATFORM_MODULES.get(platform)
 
     if module_name is None:
         print(f'⚠️  Unknown platform: {platform}')
         return
 
-    for league_id, ppr_type, league_name in leagues:
+    if platform == 'yahoo':
+        league_ids = [str(league_id) for league_id, _, _ in leagues]
+        if not league_ids:
+            return
         print(f'\n{"=" * 50}')
-        print(f'League: {league_name} ({platform})')
+        print(f'League group: {len(league_ids)} Yahoo league(s)')
         print(f'{"=" * 50}')
-        if platform == 'yahoo':
-            # Yahoo! has no scoring-type-aware roster endpoint - just fetch and apply transactions.
-            run_module(module_name, [str(league_id)])
-        else:
-            run_module(module_name, ['--league-id', str(league_id), '--ppr', ppr_type])
+        run_module(module_name, league_ids)
+        return
+
+    grouped_by_ppr = {}
+    for league_id, ppr_type, league_name in leagues:
+        grouped_by_ppr.setdefault(ppr_type, []).append(str(league_id))
+
+    for ppr_type, league_ids in grouped_by_ppr.items():
+        print(f'\n{"=" * 50}')
+        print(f'League group: {len(league_ids)} {platform} league(s) [{ppr_type}]')
+        print(f'{"=" * 50}')
+        run_module(module_name, ['--league-id', *league_ids, '--ppr', ppr_type])
 
 
 def format_markdown():

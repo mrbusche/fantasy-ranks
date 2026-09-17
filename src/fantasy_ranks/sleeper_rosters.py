@@ -93,9 +93,8 @@ def extract_player_data(player_id, player_db):
 
 
 def main():
-    # Parse command line arguments
     parser = argparse.ArgumentParser(description='Sleeper Fantasy Football Roster Export')
-    parser.add_argument('--league-id', required=True, help='Sleeper league ID')
+    parser.add_argument('--league-id', nargs='+', required=True, help='One or more Sleeper league IDs')
     parser.add_argument(
         '--ppr',
         choices=['half', 'full', 'standard'],
@@ -105,72 +104,58 @@ def main():
 
     args = parser.parse_args()
 
-    league_id = args.league_id
+    for league_id in args.league_id:
+        league_id = str(league_id)
+        owned_file = os.path.join(ROSTERS_DIR, f'sleeper_{league_id}_owned_players.json')
 
-    # Files go in current directory (sleeper/) since script runs from there
-    owned_file = os.path.join(ROSTERS_DIR, f'sleeper_{league_id}_owned_players.json')
+        print(f'Processing Sleeper League {league_id} (PPR: {args.ppr})')
 
-    print(f'Processing Sleeper League {league_id} (PPR: {args.ppr})')
+        if not needs_refresh(owned_file, DATA_CACHE_DURATION) and not needs_refresh(
+            MASTER_PLAYERS_FILE, MASTER_DB_CACHE_DURATION
+        ):
+            age = time.time() - os.path.getmtime(owned_file)
+            print(f'CACHE HIT: Sleeper data is recent. Next update in {int((DATA_CACHE_DURATION - age) / 60)} minutes.')
+            continue
 
-    # --- 1. Cache Check for Final Output ---
-    if not needs_refresh(owned_file, DATA_CACHE_DURATION) and not needs_refresh(
-        MASTER_PLAYERS_FILE, MASTER_DB_CACHE_DURATION
-    ):
-        age = time.time() - os.path.getmtime(owned_file)
-        print(f'CACHE HIT: Sleeper data is recent. Next update in {int((DATA_CACHE_DURATION - age) / 60)} minutes.')
-        return
+        print(f'Starting Sleeper update for League {league_id}...')
 
-    print(f'Starting Sleeper update for League {league_id}...')
+        player_db = get_all_players_db()
+        if not player_db:
+            print('Critical Error: Could not load player database.')
+            continue
 
-    # --- 2. Load Master Data ---
-    # We need this for EVERYTHING, so we load it first.
-    player_db = get_all_players_db()
-    if not player_db:
-        print('Critical Error: Could not load player database.')
-        return
+        try:
+            print('Fetching league rosters and users...')
+            users_map = get_league_users(league_id)
+            rosters = get_league_rosters(league_id)
 
-    try:
-        # --- 3. Fetch League Data ---
-        print('Fetching league rosters and users...')
-        users_map = get_league_users(league_id)
-        rosters = get_league_rosters(league_id)
+            final_roster_data = {}
 
-        owned_player_ids = set()
-        final_roster_data = {}
+            print(f'Processing {len(rosters)} teams...')
+            for roster in rosters:
+                owner_id = roster.get('owner_id')
+                team_name = users_map.get(owner_id, f'Orphan Team {roster.get("roster_id")}')
+                team_player_ids = roster.get('players') or []
 
-        # --- 4. Process Rosters (Owned Players) ---
-        print(f'Processing {len(rosters)} teams...')
-        for roster in rosters:
-            owner_id = roster.get('owner_id')
-            # Some rosters might be orphaned, handle gracefully
-            team_name = users_map.get(owner_id, f'Orphan Team {roster.get("roster_id")}')
+                team_cleaned_players = []
+                for pid in team_player_ids:
+                    p_data = extract_player_data(pid, player_db)
+                    is_starter = pid in (roster.get('starters') or [])
+                    p_data['roster_status'] = 'Starter' if is_starter else 'Bench'
+                    team_cleaned_players.append(p_data)
 
-            # 'players' is just a list of string IDs: ["4046", "8138", ...]
-            team_player_ids = roster.get('players') or []
+                final_roster_data[team_name] = team_cleaned_players
 
-            team_cleaned_players = []
-            for pid in team_player_ids:
-                owned_player_ids.add(pid)
-                # Build the player object
-                p_data = extract_player_data(pid, player_db)
-                is_starter = pid in (roster.get('starters') or [])
-                p_data['roster_status'] = 'Starter' if is_starter else 'Bench'
+            os.makedirs(ROSTERS_DIR, exist_ok=True)
+            with open(owned_file, 'w') as f:
+                json.dump(final_roster_data, f, indent=4)
+            print(f'SUCCESS: Saved rosters to {owned_file}')
 
-                team_cleaned_players.append(p_data)
+        except (requests.RequestException, ValueError, OSError, TypeError, KeyError) as e:
+            import traceback
 
-            final_roster_data[team_name] = team_cleaned_players
-
-        # Save Owned
-        os.makedirs(ROSTERS_DIR, exist_ok=True)
-        with open(owned_file, 'w') as f:
-            json.dump(final_roster_data, f, indent=4)
-        print(f'SUCCESS: Saved rosters to {owned_file}')
-
-    except (requests.RequestException, ValueError, OSError, TypeError, KeyError) as e:
-        import traceback
-
-        traceback.print_exc()
-        print(f'An error occurred during Sleeper processing: {e}')
+            traceback.print_exc()
+            print(f'An error occurred during Sleeper processing: {e}')
 
 
 if __name__ == '__main__':

@@ -92,13 +92,14 @@ def fetch_and_export_data(league_id, ppr_type):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Fetch ESPN league roster data')
-    parser.add_argument('--league-id', type=int, help='ESPN League ID')
+    parser.add_argument('--league-id', nargs='+', type=int, required=True, help='One or more ESPN League IDs')
     parser.add_argument('--ppr', choices=['half', 'full'], default='half', help='PPR scoring type (default: half)')
 
     args = parser.parse_args()
 
-    if check_if_update_needed_for_league(args.league_id):
-        print('Fetching and exporting ESPN data...')
-        fetch_and_export_data(args.league_id, args.ppr)
-    else:
-        print('No update needed - using existing data files.')
+    for league_id in args.league_id:
+        if check_if_update_needed_for_league(league_id):
+            print(f'Fetching and exporting ESPN data for league {league_id}...')
+            fetch_and_export_data(league_id, args.ppr)
+        else:
+            print(f'No update needed for ESPN league {league_id} - using existing data files.')
