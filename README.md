@@ -71,7 +71,7 @@ Since Yahoo! has no public API, `lineup_slots` must be set manually in `config.j
 | `D/ST`      | Team defense/special teams                 |
 | `K`         | Kicker                                     |
 
-Omit a key (or set it to `0`) if your league doesn't start that position - the weekly report will still include a row for it noting it isn't part of your starting lineup, except for unused kicker and defense rows, which are hidden. For example, a Yahoo! league that starts 1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX ("W/R/T"), 1 SUPERFLEX ("Q/W/R/T"), 1 K, and 1 D/ST would use:
+Omit a key (or set it to `0`) if your league doesn't start that position - the weekly report will still include a row for it noting it isn't part of your starting lineup, except that unused kicker and defense rows and waiver recommendations are hidden. For example, a Yahoo! league that starts 1 QB, 2 RB, 2 WR, 1 TE, 2 FLEX ("W/R/T"), 1 SUPERFLEX ("Q/W/R/T"), 1 K, and 1 D/ST would use:
 
 ```json
 "lineup_slots": {
