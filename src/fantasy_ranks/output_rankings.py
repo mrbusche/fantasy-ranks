@@ -591,11 +591,17 @@ def _print_bench_table(players_by_position, rankings, starter_keys):
 
 def _print_top_available_lists(available_by_position, rankings, lineup_slots):
     """Print the top N available free agents for each position, plus a combined FLEX list
-    and (only when the league uses one) a combined SUPERFLEX list.
+    and (only when the league uses one) a combined SUPERFLEX list. Kicker and defense
+    sections are omitted when the league does not start those positions.
     """
     ordinal_ranks = {position: _compute_position_ordinal_ranks(rankings, position) for position in BASE_SLOT_POSITIONS}
 
-    sections = list(TOP_LIST_SECTIONS)
+    sections = [
+        (position, label)
+        for position, label in TOP_LIST_SECTIONS
+        if position not in ('K', 'D/ST')
+        or lineup_slots.get(position, DEFAULT_LINEUP_SLOTS.get(position, 1)) > 0
+    ]
     if lineup_slots.get('SUPERFLEX', DEFAULT_LINEUP_SLOTS.get('SUPERFLEX', 0)) > 0:
         sections.append(('SUPERFLEX', 'Superflex (QB/RB/WR/TE)'))
 

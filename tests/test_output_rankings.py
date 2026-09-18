@@ -311,6 +311,39 @@ def test_print_combined_position_rankings_zero_starter_row():
     assert '| D/ST |' not in output_text
 
 
+def test_print_combined_position_rankings_hides_unused_kicker_and_defense_recommendations():
+    output_rankings_mod.markdown_content = []
+    rankings = {
+        'QB': {'Starter QB': {'rank': 1, 'team': 'BUF', 'position': 'QB', 'player_name': 'Starter QB'}},
+        'RB': {},
+        'WR': {},
+        'TE': {},
+        'D/ST': {
+            'Dallas Cowboys D/ST': {
+                'rank': 1,
+                'team': 'DAL',
+                'position': 'D/ST',
+                'player_name': 'Dallas Cowboys D/ST',
+            }
+        },
+        'K': {'Brandon Aubrey': {'rank': 1, 'team': 'DAL', 'position': 'K', 'player_name': 'Brandon Aubrey'}},
+    }
+
+    print_combined_position_rankings(
+        {'QB': [{'name': 'Starter QB', 'proTeam': 'BUF', 'injured': False, 'totalPoints': 20.0}]},
+        {'Starter QB'},
+        rankings,
+        'My Team',
+        'My League',
+        lineup_slots={'QB': 1, 'RB': 0, 'WR': 0, 'TE': 0, 'FLEX': 0, 'K': 0, 'D/ST': 0},
+    )
+    output_text = '\n'.join(output_rankings_mod.markdown_content)
+    assert '#### Kickers (K)' not in output_text
+    assert '#### Defense (D/ST)' not in output_text
+    assert 'Brandon Aubrey' not in output_text
+    assert 'Dallas Cowboys D/ST' not in output_text
+
+
 def test_print_combined_position_rankings_superflex():
     output_rankings_mod.markdown_content = []
     players_by_position = {
