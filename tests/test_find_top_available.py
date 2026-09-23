@@ -5,6 +5,7 @@ from fantasy_ranks.find_top_available import (
     find_available_for_league,
     find_team_players_with_rankings,
     find_top_available_players,
+    format_improvement_action,
     get_owned_players_by_league_with_teams,
     is_player_owned,
     load_ros_rankings,
@@ -62,6 +63,30 @@ def test_find_team_players_with_rankings_includes_unranked_players():
         {'name': 'Unknown Player', 'position': 'RB', 'team': 'FA', 'rank': 999},
     ]
     assert find_team_players_with_rankings('Missing Team', team_data, rankings) == []
+
+
+def test_format_improvement_action_does_not_recommend_singleton_kicker_or_defense_drop():
+    top_available = [{'name': 'Free Player', 'position': 'WR', 'rank': 1}]
+    bottom_10_team = [
+        {'name': 'Only Kicker', 'position': 'K', 'rank': 999},
+        {'name': 'Only Defense', 'position': 'D/ST', 'rank': 998},
+    ]
+
+    action = format_improvement_action(top_available, bottom_10_team, bottom_10_team)
+
+    assert action == 'Add **Free Player (WR)** from free agency to improve the roster.'
+
+
+def test_format_improvement_action_can_recommend_one_of_multiple_kickers():
+    top_available = [{'name': 'Free Player', 'position': 'WR', 'rank': 1}]
+    team_players = [
+        {'name': 'Kicker One', 'position': 'K', 'rank': 999},
+        {'name': 'Kicker Two', 'position': 'K', 'rank': 998},
+    ]
+
+    action = format_improvement_action(top_available, team_players[:1], team_players)
+
+    assert 'dropping **Kicker One (K)**' in action
 
 
 def test_get_owned_players_by_league_with_teams(tmp_path):
