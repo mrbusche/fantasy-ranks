@@ -599,8 +599,7 @@ def _print_top_available_lists(available_by_position, rankings, lineup_slots):
     sections = [
         (position, label)
         for position, label in TOP_LIST_SECTIONS
-        if position not in ('K', 'D/ST')
-        or lineup_slots.get(position, DEFAULT_LINEUP_SLOTS.get(position, 1)) > 0
+        if position not in ('K', 'D/ST') or lineup_slots.get(position, DEFAULT_LINEUP_SLOTS.get(position, 1)) > 0
     ]
     if lineup_slots.get('SUPERFLEX', DEFAULT_LINEUP_SLOTS.get('SUPERFLEX', 0)) > 0:
         sections.append(('SUPERFLEX', 'Superflex (QB/RB/WR/TE)'))
