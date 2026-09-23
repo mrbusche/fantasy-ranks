@@ -24,7 +24,7 @@ Generate lineups for your Sleeper and ESPN leagues
 
 ## Setup
 
-Create a file named `config.json` in the root. It must be valid JSON containing a `leagues` array; separate multiple leagues with a comma. Each league is validated when loaded, and invalid entries are skipped with a warning.
+Create a file named `config.json` in the root. It must be valid JSON containing a `leagues` array; separate multiple leagues with a comma. Each league is validated when loaded, and invalid entries are skipped with a warning. To store it elsewhere, set `CONFIG_FILE` in `.env` to an absolute path or a path relative to the project root; if omitted, the app uses `config.json` in the project root.
 
 ```json
 {
@@ -92,6 +92,7 @@ Create a `.env` file in the root:
 RANKINGS_URL=https://some-website.com?week={week}&export=csv
 REST_OF_SEASON_RANKINGS_PATTERN=Your Pattern*.csv
 REST_OF_SEASON_RANKINGS_2QB_PATTERN=Your 2QB Pattern*.csv
+CONFIG_FILE=config.json
 
 # Only required for private ESPN leagues
 ESPN_SWID={your-espn-swid}
@@ -101,6 +102,7 @@ ESPN_S2=your-espn-s2-value
 - `RANKINGS_URL`: Set this to your rankings source that supports weekly exports as CSV. The `{week}` placeholder is replaced with the current week number.
 - `REST_OF_SEASON_RANKINGS_PATTERN`: Optional glob pattern for finding rest-of-season rankings files in your Downloads folder. If set, the pipeline copies matching files to `rankings/rest-of-season.csv`. Omit if you prefer to manually maintain this file.
 - `REST_OF_SEASON_RANKINGS_2QB_PATTERN`: Optional glob pattern for a separate set of rest-of-season rankings tailored to 2 QB/Superflex leagues. If you maintain a file at `rankings/rest-of-season-2qb.csv`, leagues whose `lineup_slots` start 2+ QBs or a `SUPERFLEX` slot use it instead of the standard rankings. Omit (or leave the file missing) to have those leagues fall back to the standard rankings.
+- `CONFIG_FILE`: Optional path to the league configuration file. Relative paths are resolved from the project root; defaults to `config.json`.
 - `ESPN_SWID` / `ESPN_S2`: Only needed if any configured league is a private ESPN league. Log in to ESPN in your browser, open dev tools, and copy the `espn_s2` and `SWID` cookie values (`SWID` includes the surrounding curly braces).
 
 If `RANKINGS_URL` is not set, the download step will not attempt to refresh files in `rankings/`. Instead, it prints how old each existing file is so you know whether they need to be replaced manually.

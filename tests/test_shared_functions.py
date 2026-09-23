@@ -99,14 +99,29 @@ def test_load_league_config_invalid_json(tmp_path):
     assert result is None
 
 
-def test_load_league_config_default_path(tmp_path):
+def test_load_league_config_uses_default_path_when_config_file_is_not_set(tmp_path, monkeypatch):
     fake_config = tmp_path / 'config.json'
     fake_config.write_text('{"leagues": []}', encoding='utf-8')
 
-    with patch('fantasy_ranks.shared_functions.Path') as mock_path:
-        mock_path.return_value.parent.parent.parent.__truediv__.return_value = fake_config
+    monkeypatch.delenv('CONFIG_FILE', raising=False)
+    with (
+        patch('fantasy_ranks.shared_functions.PROJECT_ROOT', tmp_path),
+        patch('fantasy_ranks.shared_functions.load_dotenv'),
+    ):
         result = load_league_config()
-        assert result == {'leagues': []}
+    assert result == {'leagues': []}
+
+
+def test_load_league_config_uses_config_file_from_environment(tmp_path, monkeypatch):
+    config_file = tmp_path / 'custom-config.json'
+    config_file.write_text('{"leagues": []}', encoding='utf-8')
+    monkeypatch.setenv('CONFIG_FILE', str(config_file))
+
+    with patch('fantasy_ranks.shared_functions.load_dotenv') as mock_load_dotenv:
+        result = load_league_config()
+
+    assert result == {'leagues': []}
+    mock_load_dotenv.assert_called_once()
 
 
 @pytest.mark.parametrize(

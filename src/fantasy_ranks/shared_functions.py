@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
 import json
+import os
 from collections import Counter
 from functools import lru_cache
 from pathlib import Path
 
 import requests
+from dotenv import load_dotenv
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 VALID_PLATFORMS = ('espn', 'sleeper', 'yahoo')
 VALID_SCORING_TYPES = ('half', 'full')
@@ -205,7 +209,10 @@ def load_league_config(config_file=None):
     across multiple teams/league entries while keeping the function deterministic for tests.
     """
     if config_file is None:
-        config_file = Path(__file__).parent.parent.parent / 'config.json'
+        load_dotenv(PROJECT_ROOT / '.env')
+        config_file = Path(os.environ.get('CONFIG_FILE', 'config.json'))
+        if not config_file.is_absolute():
+            config_file = PROJECT_ROOT / config_file
 
     try:
         with open(config_file, 'r', encoding='utf-8') as file:
