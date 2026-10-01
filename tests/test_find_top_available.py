@@ -40,13 +40,13 @@ def test_is_player_owned_handles_normalized_and_defense_names():
 
 def test_find_available_for_league_sorts_and_limits_results():
     rankings = [
-        {'name': f'Player {rank:02d}', 'position': 'WR', 'team': 'TST', 'rank': rank} for rank in range(12, 0, -1)
+        {'name': f'Player {rank:02d}', 'position': 'WR', 'team': 'TST', 'rank': rank} for rank in range(20, 0, -1)
     ]
 
     available = find_available_for_league(rankings, {'Player 01'})
 
-    assert len(available) == 10
-    assert [player['rank'] for player in available] == list(range(2, 12))
+    assert len(available) == 15
+    assert [player['rank'] for player in available] == list(range(2, 17))
 
 
 def test_find_team_players_with_rankings_includes_unranked_players():

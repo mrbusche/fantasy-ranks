@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Find the top 10 available players from Rest of Season rankings for each league.
+Find the top 15 available players from Rest of Season rankings for each league.
 Also shows the 10 lowest ranked players from a team.
 """
 
@@ -104,9 +104,9 @@ def find_available_for_league(ros_rankings, owned_players):
         if not is_player_owned(player, owned_players, normalized_owned_players):
             available_players.append(player)
 
-    # Sort by rank and take top 10
+    # Sort by rank and take top 15
     available_players.sort(key=lambda x: x['rank'])
-    return available_players[:10]
+    return available_players[:15]
 
 
 def is_2qb_league(league):
@@ -223,12 +223,12 @@ def get_owned_players_by_league_with_teams(config):
 
 
 def find_top_available_players(config):
-    """Main function to find top 10 available players from ROS rankings for each league."""
+    """Main function to find top 15 available players from ROS rankings for each league."""
     base_dir = Path(__file__).resolve().parent.parent.parent
     ros_file = base_dir / 'rankings' / 'rest-of-season.csv'
     ros_2qb_file = base_dir / 'rankings' / 'rest-of-season-2qb.csv'
 
-    print('🏈 Finding Top 10 Available Players by League from Rest of Season Rankings')
+    print('🏈 Finding Top 15 Available Players by League from Rest of Season Rankings')
     print('=' * 80)
 
     # Load standard ROS rankings
@@ -268,7 +268,7 @@ def find_top_available_players(config):
     # Prepare markdown content
     markdown_lines = [
         '# Fantasy Football Analysis\n',
-        '## Top 10 Available Players + Bottom 10 Team Players by League\n',
+        '## Top 15 Available Players + Bottom 10 Team Players by League\n',
     ]
 
     # Analyze each league
@@ -288,7 +288,7 @@ def find_top_available_players(config):
         # Use 2 QB/Superflex rankings for leagues that start 2+ QBs or a SUPERFLEX slot.
         league_rankings = ros_2qb_rankings if is_2qb_league(league) else ros_rankings
 
-        # Find top 10 available for this league
+        # Find top 15 available for this league
         top_available = find_available_for_league(league_rankings, owned_players)
 
         # Find team's players with rankings
@@ -301,7 +301,7 @@ def find_top_available_players(config):
 
         # Add to markdown
         markdown_lines.append(f'\n## {league_name} {team_name}\n')
-        markdown_lines.append('### 🎯 Top 10 Available Players\n')
+        markdown_lines.append('### 🎯 Top 15 Available Players\n')
         markdown_lines.append('| Rank | Player | Position | Team |\n')
         markdown_lines.append('|------|--------|----------|------|\n')
 
