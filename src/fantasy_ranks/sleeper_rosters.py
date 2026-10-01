@@ -87,8 +87,6 @@ def extract_player_data(player_id, player_db):
         'position': position,
         'nfl_team': p_details.get('team') or 'FA',
         'status': status,
-        # search_rank is useful for sorting free agents later. Lower is better.
-        'rank': p_details.get('search_rank') or 999999,
     }
 
 
