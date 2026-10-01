@@ -78,7 +78,6 @@ def fetch_and_export_data(league_id, ppr_type):
                 'position': player.position,
                 'proTeam': player.proTeam,
                 'injured': player.injured,
-                'totalPoints': player.total_points,
             }
             owned_data[team_key].append(player_info)
 

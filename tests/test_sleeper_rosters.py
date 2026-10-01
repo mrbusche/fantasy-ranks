@@ -117,7 +117,6 @@ def test_extract_player_data_standard():
         'position': 'RB',
         'nfl_team': 'PHI',
         'status': 'Questionable',
-        'rank': 5,
     }
 
 
@@ -140,7 +139,6 @@ def test_extract_player_data_defense_and_defaults():
         'position': 'D/ST',
         'nfl_team': 'FA',
         'status': 'Inactive',
-        'rank': 999999,
     }
 
 

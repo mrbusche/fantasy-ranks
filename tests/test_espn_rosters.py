@@ -55,14 +55,12 @@ def test_fetch_and_export_data_success(tmp_path, mock_espn_league):
                         'position': 'QB',
                         'proTeam': 'KC',
                         'injured': False,
-                        'total_points': 250.5,
                     },
                     {
                         'name': 'Travis Kelce',
                         'position': 'TE',
                         'proTeam': 'KC',
                         'injured': True,
-                        'total_points': 180.2,
                     },
                 ],
             }
@@ -82,7 +80,6 @@ def test_fetch_and_export_data_success(tmp_path, mock_espn_league):
     assert 'Chiefs Kingdom' in data
     assert len(data['Chiefs Kingdom']) == 2
     assert data['Chiefs Kingdom'][0]['name'] == 'Patrick Mahomes'
-    assert data['Chiefs Kingdom'][0]['totalPoints'] == 250.5
     assert data['Chiefs Kingdom'][1]['injured'] is True
 
 
