@@ -41,6 +41,52 @@ def test_parse_transaction_row_ignores_non_transaction_rows():
     assert parse_transaction_row('Team Alpha') is None
 
 
+def test_apply_yahoo_updates_handles_trades(tmp_path, monkeypatch):
+    rosters_dir = tmp_path / 'rosters'
+    rosters_dir.mkdir()
+    (rosters_dir / 'yahoo_555_owned_players.json').write_text(
+        json.dumps(
+            {
+                'The Sheriff': [{'name': 'Aaron Jones Sr.', 'position': 'RB'}],
+                'Garth Brooks': [{'name': 'Kyle Monangai', 'position': 'RB'}],
+            }
+        ),
+        encoding='utf-8',
+    )
+    transactions = '\n'.join(
+        [
+            ' \tAaron Jones Sr. Min - RB\tTraded to\tGarth Brooks Oct 2, 3:14 am',
+            ' \tKyle Monangai Chi - RB\tTraded to\tThe Sheriff Oct 2, 3:14 am',
+        ]
+    )
+    (rosters_dir / 'yahoo_updates_555.txt').write_text(transactions, encoding='utf-8')
+    monkeypatch.chdir(tmp_path)
+
+    apply_yahoo_updates('555')
+
+    assert json.loads((rosters_dir / 'yahoo_555_owned_players.json').read_text(encoding='utf-8')) == {
+        'The Sheriff': [{'name': 'Kyle Monangai', 'position': 'RB'}],
+        'Garth Brooks': [{'name': 'Aaron Jones Sr.', 'position': 'RB'}],
+    }
+
+
+def test_apply_yahoo_updates_merges_city_and_nickname_defenses(tmp_path, monkeypatch):
+    rosters_dir = tmp_path / 'rosters'
+    rosters_dir.mkdir()
+    (rosters_dir / 'yahoo_777_owned_players.json').write_text(
+        json.dumps({'Team Alpha': [{'name': 'Green Bay', 'position': 'DEF'}, {'name': 'Packers', 'position': 'DEF'}]}),
+        encoding='utf-8',
+    )
+    (rosters_dir / 'yahoo_updates_777.txt').write_text('', encoding='utf-8')
+    monkeypatch.chdir(tmp_path)
+
+    apply_yahoo_updates('777')
+
+    assert json.loads((rosters_dir / 'yahoo_777_owned_players.json').read_text(encoding='utf-8')) == {
+        'Team Alpha': [{'name': 'Packers', 'position': 'DEF'}],
+    }
+
+
 def test_apply_yahoo_updates_processes_transactions_oldest_first(tmp_path, monkeypatch):
     rosters_dir = tmp_path / 'rosters'
     rosters_dir.mkdir()

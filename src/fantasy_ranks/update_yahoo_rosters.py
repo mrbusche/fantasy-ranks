@@ -54,14 +54,67 @@ def parse_transaction_row(row: str):
 
     added_player = None
     if match.group('added_name'):
-        added_player = {'name': match.group('added_name').strip(), 'position': match.group('added_pos').strip()}
+        added_player = _normalize_defense_name(
+            {'name': match.group('added_name').strip(), 'position': match.group('added_pos').strip()}
+        )
 
     dropped_player_name = match.group('dropped_name').strip() if match.group('dropped_name') else None
+    if dropped_player_name:
+        dropped_player_name = _DEFENSE_NICKNAMES.get(dropped_player_name, dropped_player_name)
 
     if not added_player and not dropped_player_name:
         return None
 
     return team_name, added_player, dropped_player_name
+
+
+_DEFENSE_NICKNAMES = {
+    'Arizona': 'Cardinals', 'Atlanta': 'Falcons', 'Baltimore': 'Ravens', 'Buffalo': 'Bills',
+    'Carolina': 'Panthers', 'Chicago': 'Bears', 'Cincinnati': 'Bengals', 'Cleveland': 'Browns',
+    'Dallas': 'Cowboys', 'Denver': 'Broncos', 'Detroit': 'Lions', 'Green Bay': 'Packers',
+    'Houston': 'Texans', 'Indianapolis': 'Colts', 'Jacksonville': 'Jaguars', 'Kansas City': 'Chiefs',
+    'Las Vegas': 'Raiders', 'Los Angeles Chargers': 'Chargers', 'Los Angeles Rams': 'Rams',
+    'Miami': 'Dolphins', 'Minnesota': 'Vikings', 'New England': 'Patriots', 'New Orleans': 'Saints',
+    'New York Giants': 'Giants', 'New York Jets': 'Jets', 'Philadelphia': 'Eagles', 'Pittsburgh': 'Steelers',
+    'San Francisco': '49ers', 'Seattle': 'Seahawks', 'Tampa Bay': 'Buccaneers', 'Tennessee': 'Titans',
+    'Washington': 'Commanders',
+}  # fmt: skip
+
+
+def _normalize_defense_name(player: dict) -> dict:
+    """Yahoo! defenses are named by nickname (e.g. 'Packers'); map any city-style name to match."""
+    if player.get('position') in ('DEF', 'D/ST') and player['name'] in _DEFENSE_NICKNAMES:
+        return {**player, 'name': _DEFENSE_NICKNAMES[player['name']]}
+    return player
+
+
+def _dedupe_roster(roster: list) -> list:
+    seen = set()
+    result = []
+    for player in map(_normalize_defense_name, roster):
+        if player['name'] not in seen:
+            seen.add(player['name'])
+            result.append(player)
+    return result
+
+
+def parse_trade_row(row: str):
+    """Parse a Yahoo! trade row, e.g. ' \tAaron Jones Sr. Min - RB\tTraded to\tGarth Brooks Oct 2, 3:14 am'.
+
+    Returns (destination_team, player_dict) or None if the row isn't a trade.
+    """
+    fields = [field.strip() for field in row.split('\t') if field.strip()]
+    if len(fields) < 3 or fields[-2].lower() != 'traded to':
+        return None
+
+    match = re.match(_PLAYER_ENTRY.format(prefix='p') + r'$', fields[-3])
+    if not match:
+        return None
+
+    team_and_date = fields[-1]
+    date_match = DATE_PATTERN.search(team_and_date)
+    team_name = team_and_date[: date_match.start()].strip() if date_match else team_and_date.strip()
+    return team_name, {'name': match.group('p_name').strip(), 'position': match.group('p_pos').strip()}
 
 
 def apply_yahoo_updates(league_id: str):
@@ -70,6 +123,7 @@ def apply_yahoo_updates(league_id: str):
 
     with open(json_file, 'r', encoding='utf-8') as f:
         league_data = json.load(f)
+    league_data = {team: _dedupe_roster(roster) for team, roster in league_data.items()}
 
     with open(updates_file, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -83,6 +137,19 @@ def apply_yahoo_updates(league_id: str):
 
     # Yahoo! lists the newest transaction first, so reverse to apply oldest first.
     for row in reversed(transaction_rows):
+        trade = parse_trade_row(row)
+        if trade is not None:
+            to_team, player = trade
+            if to_team not in league_data:
+                continue
+            # The row only names the destination, so remove the player from whichever team had him.
+            for team, team_roster in league_data.items():
+                if team != to_team:
+                    league_data[team] = [p for p in team_roster if p['name'] != player['name']]
+            if not any(p['name'] == player['name'] for p in league_data[to_team]):
+                league_data[to_team].append(player)
+            continue
+
         parsed = parse_transaction_row(row)
         if parsed is None:
             continue
