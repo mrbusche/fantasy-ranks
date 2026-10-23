@@ -17,6 +17,9 @@ ROSTERS_DIR = os.path.join(PROJECT_ROOT, 'rosters')
 MASTER_PLAYERS_FILE = os.path.join(ROSTERS_DIR, 'sleeper_master_players.json')
 
 
+PLAYER_FIELDS = ('first_name', 'last_name', 'position', 'team', 'status', 'injury_status')
+
+
 def needs_refresh(filename, duration):
     if not os.path.exists(filename):
         return True
@@ -37,7 +40,12 @@ def get_all_players_db():
     try:
         resp = requests.get('https://api.sleeper.app/v1/players/nfl')
         resp.raise_for_status()
-        data = resp.json()
+        # Drop retired/unsigned players; active free agents are kept since they can still be rostered
+        data = {
+            pid: {k: p[k] for k in PLAYER_FIELDS if p.get(k) is not None}
+            for pid, p in resp.json().items()
+            if p.get('team') or p.get('active')
+        }
         os.makedirs(ROSTERS_DIR, exist_ok=True)
         with open(MASTER_PLAYERS_FILE, 'w') as f:
             json.dump(data, f)

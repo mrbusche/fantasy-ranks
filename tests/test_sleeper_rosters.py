@@ -49,7 +49,11 @@ def test_get_all_players_db_from_cache(tmp_path):
 
 def test_get_all_players_db_from_api(tmp_path, mock_requests_response):
     cache_file = tmp_path / 'sleeper_master_players.json'
-    api_data = {'456': {'first_name': 'Lamar', 'last_name': 'Jackson'}}
+    api_data = {
+        '456': {'first_name': 'Lamar', 'last_name': 'Jackson', 'team': 'BAL', 'age': 28},
+        '789': {'first_name': 'Retired', 'last_name': 'Guy', 'team': None, 'active': False},
+        '101': {'first_name': 'Free', 'last_name': 'Agent', 'team': None, 'active': True},
+    }
     mock_resp = mock_requests_response(api_data)
 
     with (
@@ -59,7 +63,10 @@ def test_get_all_players_db_from_api(tmp_path, mock_requests_response):
         patch('requests.get', return_value=mock_resp),
     ):
         result = get_all_players_db()
-        assert result == api_data
+        assert result == {
+            '456': {'first_name': 'Lamar', 'last_name': 'Jackson', 'team': 'BAL'},
+            '101': {'first_name': 'Free', 'last_name': 'Agent'},
+        }
         assert cache_file.exists()
 
 
