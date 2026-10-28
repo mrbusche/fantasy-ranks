@@ -17,6 +17,7 @@ ROSTERS_DIR = os.path.join(PROJECT_ROOT, 'rosters')
 MASTER_PLAYERS_FILE = os.path.join(ROSTERS_DIR, 'sleeper_master_players.json')
 
 
+FANTASY_POSITIONS = ('DEF', 'K', 'QB', 'RB', 'WR', 'TE')
 PLAYER_FIELDS = ('first_name', 'last_name', 'position', 'team', 'status', 'injury_status')
 
 
@@ -44,7 +45,7 @@ def get_all_players_db():
         data = {
             pid: {k: p[k] for k in PLAYER_FIELDS if p.get(k) is not None}
             for pid, p in resp.json().items()
-            if p.get('team') or p.get('active')
+            if (p.get('team') or p.get('active')) and p.get('position') in FANTASY_POSITIONS
         }
         os.makedirs(ROSTERS_DIR, exist_ok=True)
         with open(MASTER_PLAYERS_FILE, 'w') as f:

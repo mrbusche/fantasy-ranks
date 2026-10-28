@@ -50,9 +50,10 @@ def test_get_all_players_db_from_cache(tmp_path):
 def test_get_all_players_db_from_api(tmp_path, mock_requests_response):
     cache_file = tmp_path / 'sleeper_master_players.json'
     api_data = {
-        '456': {'first_name': 'Lamar', 'last_name': 'Jackson', 'team': 'BAL', 'age': 28},
-        '789': {'first_name': 'Retired', 'last_name': 'Guy', 'team': None, 'active': False},
-        '101': {'first_name': 'Free', 'last_name': 'Agent', 'team': None, 'active': True},
+        '456': {'first_name': 'Lamar', 'last_name': 'Jackson', 'position': 'QB', 'team': 'BAL', 'age': 28},
+        '789': {'first_name': 'Retired', 'last_name': 'Guy', 'position': 'QB', 'team': None, 'active': False},
+        '101': {'first_name': 'Free', 'last_name': 'Agent', 'position': 'WR', 'team': None, 'active': True},
+        '202': {'first_name': 'Some', 'last_name': 'Safety', 'position': 'DB', 'team': 'BAL'},
     }
     mock_resp = mock_requests_response(api_data)
 
@@ -64,8 +65,8 @@ def test_get_all_players_db_from_api(tmp_path, mock_requests_response):
     ):
         result = get_all_players_db()
         assert result == {
-            '456': {'first_name': 'Lamar', 'last_name': 'Jackson', 'team': 'BAL'},
-            '101': {'first_name': 'Free', 'last_name': 'Agent'},
+            '456': {'first_name': 'Lamar', 'last_name': 'Jackson', 'position': 'QB', 'team': 'BAL'},
+            '101': {'first_name': 'Free', 'last_name': 'Agent', 'position': 'WR'},
         }
         assert cache_file.exists()
 
