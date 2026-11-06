@@ -42,11 +42,21 @@ def get_all_players_db():
         resp = requests.get('https://api.sleeper.app/v1/players/nfl')
         resp.raise_for_status()
         # Drop retired/unsigned players; active free agents are kept since they can still be rostered
-        data = {
-            pid: {k: p[k] for k in PLAYER_FIELDS if p.get(k) is not None}
-            for pid, p in resp.json().items()
-            if (p.get('team') or p.get('active')) and p.get('position') in FANTASY_POSITIONS
-        }
+        data = {}
+        for pid, player in resp.json().items():
+            position = player.get('position')
+            if position not in FANTASY_POSITIONS:
+                position = next(
+                    (
+                        fantasy_position
+                        for fantasy_position in player.get('fantasy_positions') or []
+                        if fantasy_position in FANTASY_POSITIONS
+                    ),
+                    None,
+                )
+            if (player.get('team') or player.get('active')) and position:
+                data[pid] = {k: player[k] for k in PLAYER_FIELDS if player.get(k) is not None}
+                data[pid]['position'] = position
         os.makedirs(ROSTERS_DIR, exist_ok=True)
         with open(MASTER_PLAYERS_FILE, 'w') as f:
             json.dump(data, f)
