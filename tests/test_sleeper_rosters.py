@@ -54,6 +54,13 @@ def test_get_all_players_db_from_api(tmp_path, mock_requests_response):
         '789': {'first_name': 'Retired', 'last_name': 'Guy', 'position': 'QB', 'team': None, 'active': False},
         '101': {'first_name': 'Free', 'last_name': 'Agent', 'position': 'WR', 'team': None, 'active': True},
         '202': {'first_name': 'Some', 'last_name': 'Safety', 'position': 'DB', 'team': 'BAL'},
+        '303': {
+            'first_name': 'Travis',
+            'last_name': 'Hunter',
+            'position': 'DB',
+            'fantasy_positions': ['DB', 'WR'],
+            'team': 'JAX',
+        },
     }
     mock_resp = mock_requests_response(api_data)
 
@@ -67,6 +74,7 @@ def test_get_all_players_db_from_api(tmp_path, mock_requests_response):
         assert result == {
             '456': {'first_name': 'Lamar', 'last_name': 'Jackson', 'position': 'QB', 'team': 'BAL'},
             '101': {'first_name': 'Free', 'last_name': 'Agent', 'position': 'WR'},
+            '303': {'first_name': 'Travis', 'last_name': 'Hunter', 'position': 'WR', 'team': 'JAX'},
         }
         assert cache_file.exists()
 
